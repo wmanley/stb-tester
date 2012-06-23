@@ -1,0 +1,55 @@
+#!/usr/bin/python
+
+import ast
+import os.path
+import sys
+
+
+def main(argv):
+    filename = argv[1]
+    testscript = parse(filename)
+    optimise(testscript)
+    write(testscript, filename)
+
+
+def parse(filename):
+    with open(filename, "r") as f:
+        st = ast.parse(f.read(), filename)
+    return st  # syntax tree
+
+
+def write(st, filename):
+    import codegen
+
+    print codegen.to_source(st)
+    # with open(filename + "~", "w") as f:
+    #     f.write(codegen.to_source(st))
+
+
+def optimise(st):
+    for transformation in [
+            RemoveWaitForMatchIfImageDoesntExist(),
+            ]:
+        st = transformation.visit(st)
+
+
+class RemoveWaitForMatchIfImageDoesntExist(ast.NodeTransformer):
+    def visit_Call(self, node):
+        # generic_visit(node)  # TODO: Is this necessary?
+        if node.func.id == "wait_for_match":
+            if len(node.args) != 1:
+                exit("Invalid number of arguments for 'wait_for_match' "
+                     "at line %d." % node.lineno)
+            img = node.args[0].s
+            if not os.path.exists(img):
+                return None  # remove this node
+        return node
+
+
+def exit(s):
+    sys.stderr.write(os.path.basename(sys.argv[0]) + ": " + s + "\n")
+    sys.exit(1)
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
