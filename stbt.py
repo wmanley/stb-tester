@@ -83,6 +83,32 @@ _config = None
 # Functions available to stbt scripts
 #===========================================================================
 
+def _find_stbt_dir():
+    pwd = os.getcwd()
+    elems = pwd.split('/')
+    for i in range(len(elems), 0, -1):
+        try_dir = "/".join(elems[0:i])
+        if os.path.isfile(try_dir + '/stbt.conf'):
+            return try_dir
+
+
+def _test_find_stbt_dir():
+    import tempfile, shutil
+    oldcwd = os.getcwd()
+    tmpdir = tempfile.mkdtemp()
+    os.chdir(tmpdir)
+    assert _find_stbt_dir() == None
+    open('stbt.conf', 'a').close()
+    assert _find_stbt_dir() == tmpdir
+    os.mkdir('subdir')
+    os.chdir('subdir')
+    assert _find_stbt_dir() == tmpdir
+    open('stbt.conf', 'a').close()
+    assert _find_stbt_dir() == tmpdir + '/subdir'
+    os.chdir(oldcwd)
+    shutil.rmtree(tmpdir)
+
+
 def get_config(section, key, default=None):
     """Read the value of `key` from `section` of the stbt config file.
 
@@ -98,6 +124,19 @@ def get_config(section, key, default=None):
         _config = ConfigParser.SafeConfigParser()
         _config.readfp(
             open(os.path.join(os.path.dirname(__file__), 'stbt.conf')))
+
+        stbt_dir = _find_stbt_dir()
+        if stbt_dir is None:
+            data_dir = os.environ.get(
+                'XDG_DATA_HOME', '%s/.local/share' % os.environ['HOME']) + '/stbt'
+            stbt_dir_cfg = ''
+            test_script_root = os.getcwd()
+        else:
+            data_dir = stbt_dir
+            stbt_dir_cfg = stbt_dir + '/stbt.conf'
+            test_script_root = stbt_dir + 'test-scripts'
+        _config.set('DEFAULT', 'data_dir', data_dir)
+
         try:
             # Host-wide config, e.g. /etc/stbt/stbt.conf (see `Makefile`).
             system_config = _config.get('global', '__system_config')
@@ -110,7 +149,7 @@ def get_config(section, key, default=None):
             # directory specification:
             '%s/stbt/stbt.conf' % os.environ.get(
                 'XDG_CONFIG_HOME', '%s/.config' % os.environ['HOME']),
-            # Config files specific to the test suite / test run:
+            stbt_dir_cfg,
             os.environ.get('STBT_CONFIG_FILE', ''),
         ])
 
