@@ -1,0 +1,92 @@
+#!/bin/bash
+
+parse_args()
+{
+	# Slightly rediculous: take advantage of python's superior argument parsing
+	# but write the script in shell
+	argsfile=$(mktemp -t stbt-init-args.XXXXXX)
+	cat <<-EOF | python - "$@" >"$argsfile"
+		import argparse
+		import sys
+		
+		parser = argparse.ArgumentParser()
+		parser.prog = "stbt init"
+		parser.add_argument(
+		    "--test-scripts-repo",
+		    default='',
+		    help="git URL containing test scripts to be checked out")
+		args = parser.parse_args()
+		
+		for k, v in args.__dict__.items():
+		    sys.stdout.write("%s='%s'\n" % (k, v))
+		sys.exit(120)
+		EOF
+	parse_exit_code=$?
+	if [ "$parse_exit_code" == 120 ]; then
+		. "$argsfile"
+	else
+		echo "FAILURE: $parse_exit_code"
+		cat "$argsfile"
+		exit "$parse_exit_code"
+	fi
+	rm "$argsfile"
+}
+
+parse_args "$@"
+
+fail() {
+    echo "$@"
+    exit 1
+}
+
+mkdir -p test-scripts log &&
+if [ -d 'test-scripts/.git' ];
+then
+    [ -n "$test_scripts_repo" ] || fail "Test scripts repo already exists.  Will not overwrite with new configuration"
+    printf "[service]\ntest_scripts_repo = %s\n" \
+        "$(GIT_DIR=test-scripts git config remote.origin.url)" >stbt.conf
+else
+    if [ -n "$test_scripts_repo" ]; then
+        git clone "$test_scripts_repo" test-scripts ||
+            fail "Failed to clone test-scripts repo" &&
+        printf "[service]\ntest_scripts_repo = %s\n" "$test_scripts_repo" >stbt.conf
+    else
+        (
+            cd test-scripts &&
+            git init &&
+            mkdir -p tests library &&
+            cat <<-EOF >README &&
+				This is a repository of stb-tester test scripts.  This repo has the
+				structure:
+				
+				    tests/*/ - Each directory under tests is an stb-tester test
+				               containing a test.py and possibly images to match
+				               against
+				    library/ - Contains python modules with common code which may
+				               be used by more than one test.
+				EOF
+            echo '*.pyc' > .gitignore &&
+            git add README .gitignore &&
+            git commit -m 'Initialized empty stbt repo'
+        ) || fail "Failed to create git repo for test scripts"
+    fi
+fi
+
+cat <<-EOF >.gitignore &&
+	test-scripts
+	log
+	workspace
+	EOF
+
+#TODO: Consistency of naming.  Is this a "node" or a "repo" or something else?
+cat <<-EOF >README &&
+	This is a stb-tester[1] node.  See \`man stbt\` for more information.
+	
+	[1]: http://stb-tester.com/
+	EOF
+
+touch stbt.conf &&
+
+git init &&
+git add stbt.conf .gitignore README &&
+git commit -m "Initial stbt node template setup"
