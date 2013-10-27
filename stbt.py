@@ -93,11 +93,12 @@ def _find_stbt_dir():
 
 
 def _test_find_stbt_dir():
-    import tempfile, shutil
+    import tempfile
+    import shutil
     oldcwd = os.getcwd()
     tmpdir = tempfile.mkdtemp()
     os.chdir(tmpdir)
-    assert _find_stbt_dir() == None
+    assert _find_stbt_dir() is None
     open('stbt.conf', 'a').close()
     assert _find_stbt_dir() == tmpdir
     os.mkdir('subdir')
@@ -127,14 +128,13 @@ def get_config(section, key, default=None):
 
         stbt_dir = _find_stbt_dir()
         if stbt_dir is None:
-            data_dir = os.environ.get(
-                'XDG_DATA_HOME', '%s/.local/share' % os.environ['HOME']) + '/stbt'
+            data_dir = (os.environ.get(
+                'XDG_DATA_HOME', '%s/.local/share' % os.environ['HOME'])
+                + '/stbt')
             stbt_dir_cfg = ''
-            test_script_root = os.getcwd()
         else:
             data_dir = stbt_dir
             stbt_dir_cfg = stbt_dir + '/stbt.conf'
-            test_script_root = stbt_dir + 'test-scripts'
         _config.set('DEFAULT', 'data_dir', data_dir)
 
         try:
