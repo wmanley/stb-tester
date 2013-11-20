@@ -39,7 +39,7 @@ export GST_PLUGIN_PATH="$srcdir/gst:$GST_PLUGIN_PATH"
 export PYTHONPATH="$srcdir:$PYTHONPATH"
 export PYTHONUNBUFFERED=x
 export PYLINTRC="$testdir/pylint.conf"
-rm -f ~/.gstreamer-0.10/registry.*
+rm -f ~/.gstreamer-1.0/registry.*
 
 run() {
     scratchdir=$(mktemp -d -t stb-tester.XXX)
