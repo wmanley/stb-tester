@@ -237,7 +237,7 @@ test_that_video_index_is_written_on_eos() {
 	EOF
     stbt-run -v \
         --sink-pipeline \
-            "queue ! vp8enc speed=7 ! webmmux ! filesink location=video.webm" \
+            "queue ! vp8enc ! webmmux ! filesink location=video.webm" \
         test.py &&
     webminspector.py video.webm &> webminspector.log &&
     grep "Cue Point" webminspector.log || {
