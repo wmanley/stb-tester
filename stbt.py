@@ -136,6 +136,10 @@ def press(key):
     draw_text(key, duration_secs=3)
 
 
+def hold(key):
+    return _control.hold(key)
+
+
 def draw_text(text, duration_secs=3):
     """Write the specified `text` to the video output.
 
@@ -1134,6 +1138,12 @@ class NullRemote:
     def press(key):
         debug('NullRemote: Ignoring request to press "%s"' % key)
 
+    @contextlib.contextmanager
+    def hold(self, key):
+        debug('NullRemote: Ignoring request to hold "%s"' % key)
+        yield
+        debug('NullRemote: Ignoring request to release "%s"' % key)
+
 
 class VideoTestSrcControl:
     """Remote control used by selftests.
@@ -1176,6 +1186,10 @@ class VideoTestSrcControl:
         self.videosrc.props.pattern = key
         debug("Pressed %s" % key)
 
+    @contextlib.contextmanager
+    def hold(self, key):
+        raise NotImplementedError('VideoTestSrcControl: hold not implemented')
+
 
 class VirtualRemote:
     """Send a key-press to a set-top box running a VirtualRemote listener.
@@ -1201,6 +1215,12 @@ class VirtualRemote:
     def _connect(self):
         return _connect_tcp_socket(self.hostname, self.port)
 
+    @contextlib.contextmanager
+    def hold(self, key):
+        self._connect().sendall('D\t%s\n\x00' % key)  # key Down
+        yield
+        self._connect().sendall('U\t%s\n\x00' % key)  # key Up
+
 
 class LircRemote:
     """Send a key-press via a LIRC-enabled infrared blaster.
@@ -1217,6 +1237,16 @@ class LircRemote:
         s.sendall("SEND_ONCE %s %s\n" % (self.control_name, key))
         _read_lircd_reply(s)
         debug("Pressed " + key)
+
+    @contextlib.contextmanager
+    def hold(self, key):
+        s = self._connect()
+        s.sendall('SEND_START %s %s\n' % (self.control_name, key))
+        s.close()
+        yield
+        s = self._connect()
+        s.sendall('SEND_STOP %s %s\n' % (self.control_name, key))
+        s.close()
 
 
 def new_local_lirc_remote(lircd_socket, control_name):
@@ -1293,6 +1323,10 @@ class IRNetBoxRemote:
                 self.hostname, e)),)
             e.strerror = e.args[0]
             raise
+
+    @contextlib.contextmanager
+    def hold(self, key):
+        raise NotImplementedError('IRNetBoxRemote: hold not implemented')
 
 
 def uri_to_remote_recorder(uri):
