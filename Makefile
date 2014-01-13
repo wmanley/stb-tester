@@ -37,10 +37,15 @@ VERSION?=$(shell cat VERSION)
 
 all: stbt stbt.1 defaults.conf
 
-stbt: stbt.in .stbt-prefix VERSION
+stbt extra/stb-tester.spec : % : %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
-	    -e 's,@SYSCONFDIR@,$(sysconfdir),g' $< > $@
+	    -e 's,@SYSCONFDIR@,$(sysconfdir),g' \
+	    -e 's,@BINDIR@,$(bindir),g' \
+	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
+	    -e 's,@MAN1DIR@,$(man1dir),g' \
+	    -e 's,@MAKEOVERRIDES@,$(MAKEOVERRIDES),g' \
+	    $< > $@
 
 defaults.conf: stbt.conf .stbt-prefix
 	perl -lpe \
@@ -102,7 +107,8 @@ README.rst: stbt.py api-doc.sh
 	STBT_CONFIG_FILE=stbt.conf ./api-doc.sh $@
 
 clean:
-	rm -f stbt.1 stbt defaults.conf .stbt-prefix
+	rm -f stbt.1 stbt defaults.conf .stbt-prefix extra/stb-tester.spec \
+	      extra/smart-tv-capture/gst/stbtwatchplane.so
 
 check: check-nosetests check-integrationtests check-pylint check-bashcompletion
 check-nosetests:
