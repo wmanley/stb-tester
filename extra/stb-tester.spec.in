@@ -1,5 +1,5 @@
 Name: stb-tester
-Version: 0.18
+Version: @VERSION@
 Release: 1%{?dist}
 Summary: Automated user interface testing for set-top boxes
 Group: Development/Tools
@@ -34,17 +34,17 @@ command.
 %setup
 
 %build
-make prefix=/usr sysconfdir=/etc
+make @MAKEOVERRIDES@
 
 %install
-make install prefix=/usr sysconfdir=/etc DESTDIR=${RPM_BUILD_ROOT}
+make install @MAKEOVERRIDES@ DESTDIR=${RPM_BUILD_ROOT}
 
 %files
 %defattr(-,root,root,-)
 
-/usr/bin/stbt
-/usr/bin/irnetbox-proxy
-/usr/libexec/stbt
-/usr/share/man/man1
-/etc/stbt
-/etc/bash_completion.d/stbt
+@BINDIR@/stbt
+@BINDIR@/irnetbox-proxy
+@LIBEXECDIR@/stbt
+@MAN1DIR@
+@SYSCONFDIR@/stbt
+@SYSCONFDIR@/bash_completion.d/stbt
