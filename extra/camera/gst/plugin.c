@@ -28,6 +28,7 @@
 #include <gst/gst.h>
 
 #include "stbtwatchplane.h"
+#include "stbthistogramcorrect.h"
 #include "stbtvignettecorrect.h"
 
 static gboolean
@@ -35,6 +36,8 @@ plugin_init (GstPlugin * plugin)
 {
   return gst_element_register (plugin, "stbtwatchplane", GST_RANK_NONE,
       STBT_TYPE_WATCH_PLANE)
+    && gst_element_register (plugin, "stbthistogramcorrect", GST_RANK_NONE,
+      STBT_TYPE_HISTOGRAM_CORRECT)
     && gst_element_register (plugin, "stbtvignettecorrect", GST_RANK_NONE,
       STBT_TYPE_VIGNETTE_CORRECT);
 }

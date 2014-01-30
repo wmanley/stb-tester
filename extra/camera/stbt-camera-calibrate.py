@@ -465,6 +465,182 @@ def calibrate_illumination(tv):
 
 
 ###
+### Colours
+###
+
+BIN_SIZE=16
+
+ColourRGB = namedtuple('ColourRGB', 'r g b')
+
+CENTRE = 0
+LOWER = 1
+UPPER = 2
+COUNT = 3
+
+
+def histogram(data, bucket_size, length):
+    buckets = [[0, 0, 0, 0]] * (length//bucket_size + 1)
+    for n in range(0, length//bucket_size + 1):
+        buckets[n] = [(n+0.5) * bucket_size, n * bucket_size, (n+1) * bucket_size, 0]
+    for x in data:
+        buckets[int(x//bucket_size)][3] += 1
+    return buckets
+
+
+def cumulate(data):
+    x=0
+    for y in data:
+        x+=y[3]
+        yield y[0:3] + [x]
+
+
+def plot_histogram(data, style):
+    hist = list(cumulate(histogram(data, BIN_SIZE, 256)))
+    total = hist[-1][COUNT]
+    pylab.plot([x[0] for x in hist], [x[3]/total for x in hist], style)
+
+def plot_difference(a, b, style):
+    hista = list(cumulate(histogram(a, BIN_SIZE, 256)))
+    histb = list(cumulate(histogram(b, BIN_SIZE, 256)))
+    pylab.plot([x[0] for x in hista], [a_[3] - b_[3] for a_, b_ in zip(hista, histb)], style)
+
+
+def percentile_to_val(cumhist, percentile):
+    assert percentile >=0 and percentile <= 1.0
+    ch = [x[3] for x in cumhist]
+    v = cumhist[-1][COUNT] * percentile
+    p = bisect_left(ch, v)
+
+    if p == 0:
+        left = [-cumhist[0][UPPER]/2, -cumhist[0][UPPER], 0, 0]
+    else:
+        left = cumhist[p - 1]
+
+    if p == len(cumhist):
+        right = [cumhist[-1][UPPER], cumhist[-1][UPPER],
+                 cumhist[-1][UPPER] + BIN_SIZE, cumhist[-1][COUNT]]
+    else:
+        right = cumhist[p]
+
+    if right[COUNT] == left[COUNT]:
+        binpct = 0.5
+    else:
+        binpct = (v - left[COUNT]) / (right[COUNT] - left[COUNT])
+    return (left[UPPER] +
+            binpct * (right[UPPER] - left[UPPER]))
+
+
+def val_to_percentile(cumhist, val):
+    n = int(val//BIN_SIZE)
+    right = cumhist[n]
+    if n > 0:
+        left = cumhist[n - 1]
+    else:
+        left = [-cumhist[0][UPPER]/2, -cumhist[0][UPPER], 0, 0]
+    assert(val >= right[LOWER] and val < right[UPPER])
+    val_pct = (float(val) - right[LOWER]) / (right[UPPER] - right[LOWER])
+    v = left[COUNT] + val_pct * (right[COUNT] - left[COUNT])
+    pct = v/cumhist[-1][COUNT]
+    assert pct >= 0 and pct <= 1.0
+    return pct
+
+
+def correct(cumhista, cumhistb, val):
+    percentile = val_to_percentile(cumhista, val)
+    return percentile_to_val(cumhistb, percentile)
+
+
+
+def test_histogram_correction_identity():
+    from nose.tools import eq_
+    cumhist = list(cumulate(histogram(range(0,256), BIN_SIZE, 256)))
+    for percentile in [x/256 for x in range(0,256)]:
+        val = percentile_to_val(cumhist, percentile)
+        eq_(val, percentile*256)
+        eq_(percentile, val_to_percentile(cumhist, val))
+    for val in range(0,256):
+        percentile = val_to_percentile(cumhist, val)
+        eq_(val/256, percentile)
+        eq_(val, percentile_to_val(cumhist, percentile))
+
+
+def frange(start, stop, step=1.0):
+    n=0
+    if step > 0:
+        while start + n*step < stop:
+            yield start + n*step
+            n += 1
+    else:
+        raise NotImplementedError()
+
+
+def test_histogram_correction_requiring_mapping():
+    from nose.tools import eq_
+    cumhist1 = list(cumulate(histogram(frange(0, 256, 1/3), BIN_SIZE, 256)))
+    cumhist2 = list(cumulate(histogram(frange(128, 256, 1/4), BIN_SIZE, 256)))
+    for val1, val2 in zip(frange(0, 256), frange(128, 256, 0.5)):
+        eq_(val1, correct(cumhist2, cumhist1, val2))
+
+
+def test_histogram_correction_non_linear():
+    from nose.tools import eq_
+    cumhist1 = list(cumulate(histogram(frange(0, 256, 1/3), BIN_SIZE, 256)))
+
+    data = list(frange(0, 64, 0.5)) + list(frange(192, 256, 0.5))
+    cumhist2 = list(cumulate(histogram(data, BIN_SIZE, 256)))
+    for val1, val2 in zip(frange(0, 128), frange(0, 64, 0.5)):
+        eq_(val1, correct(cumhist2, cumhist1, val2))
+    for val1, val2 in zip(frange(128, 256), frange(192, 256, 0.5)):
+        eq_(val1, correct(cumhist2, cumhist1, val2))
+
+
+def main_calib_colours(argv):
+    tv.show('colours')
+    data = analyse_colours_video(50)
+
+    IDEAL = 0
+    MEASURED = 1
+    CORRECTED = 2
+    RED = 0
+    GREEN = 1
+    BLUE = 2
+
+    hists = [[[None], [None], [None]], [[None], [None], [None]]]
+    for is_ideal in [IDEAL, MEASURED]:
+        for colour in [RED, GREEN, BLUE]:
+            hists[is_ideal][colour] = list(cumulate(histogram(
+                [x[is_ideal+1][colour] for x in data], BIN_SIZE, 256)))
+
+    pylab.xlabel('Value')
+    pylab.ylabel('Frequency')
+
+    for c in [RED, GREEN, BLUE]:
+        pylab.plot(range(0, 256, BIN_SIZE), [hists[MEASURED][c][x//BIN_SIZE][3] for x in range(0,256, BIN_SIZE)], '%s.' % 'rgb'[c])
+        pylab.plot(range(0, 256, BIN_SIZE), [hists[IDEAL][c][x//BIN_SIZE][3] for x in range(0,256, BIN_SIZE)], '%s.' % 'rgb'[c])
+        pylab.plot(range(0, 256), [x - correct(hists[MEASURED][c], hists[IDEAL][c], x) for x in range(0,256)], '%s-' % 'rgb'[c])
+
+    pylab.axis([0, 256, -128, 128])
+    pylab.show()
+
+    if args.print_corrections:
+        for x in range(0, 256):
+            args.print_corrections.write(
+                "%i\t%i\t%i\t%i\n" % (x,
+                correct(hists[MEASURED][RED], hists[IDEAL][RED], x) - x,
+                correct(hists[MEASURED][GREEN], hists[IDEAL][GREEN], x) - x,
+                correct(hists[MEASURED][BLUE], hists[IDEAL][BLUE], x) - x))
+    if args.print_corrected:
+        for n, i, m in data:
+            c = (correct(hists[MEASURED][RED], hists[IDEAL][RED], m[RED]),
+                 correct(hists[MEASURED][GREEN], hists[IDEAL][GREEN], m[GREEN]),
+                 correct(hists[MEASURED][BLUE], hists[IDEAL][BLUE], m[BLUE]))
+            args.print_corrected.write("\t".join([repr(x) for x in (n,) + i + m + c]) + "\n")
+
+
+def calibrate_colours(tv):
+    pass
+
+###
 ### setup
 ###
 
@@ -525,6 +701,7 @@ def setup():
 ###
 
 defaults = {
+    'histogram_correction': '',
     'vignettecorrect_params': '',
     'v4l2_ctls':
         'brightness=128,contrast=128,saturation=128,'
@@ -550,6 +727,7 @@ defaults = {
         'queue leaky=upstream name="geometric" max-size-buffers=2 ! videoconvert ! stbtwatchplane '
         'name=geometric_correction qos=false %(watchplane_params)s '
         '! queue name="vignetting" max-size-buffers=2 ! stbtvignettecorrect name=illumination_correction %(vignettecorrect_params)s '
+        '! queue name="histogram" max-size-buffers=2 ! stbthistogramcorrect %(histogram_correction)s',
 }
 
 def main(argv):
@@ -599,6 +777,7 @@ def main(argv):
     if args.interactive:
         adjust_levels(tv)
     calibrate_illumination(tv)
+    calibrate_colours(tv)
 
     if args.interactive:
         raw_input("Calibration complete.  Press <ENTER> to exit")

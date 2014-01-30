@@ -199,6 +199,8 @@ CFLAGS?=-O2
 extra/camera/gst/stbt-gst-plugins.so : extra/camera/gst/stbtwatchplane.c \
                                      extra/camera/gst/stbtwatchplane.h \
                                      extra/camera/gst/plugin.c \
+                                     extra/camera/gst/stbthistogramcorrect.c \
+                                     extra/camera/gst/stbthistogramcorrect.h \
                                      extra/camera/gst/stbtvignettecorrect.c \
                                      extra/camera/gst/stbtvignettecorrect.h \
                                      extra/camera/gst/stbtvignettecorrect_orc.c \
