@@ -16,3 +16,5 @@ tests/test-install
 nosetest-issue-49-workaround-stbt-control.py
 extra/stb-tester.spec
 extra/camera/stbt-camera
+*_orc.h
+*_orc.c

@@ -7,9 +7,10 @@ import cv2
 import math
 import numpy
 import sys
-from itertools import count
+from itertools import count, izip
 import time
 import tv_driver
+from gi.repository import Gst  # pylint: disable=E0611
 from os.path import abspath, dirname
 
 try:
@@ -215,6 +216,55 @@ def geometric_calibration(tv, interactive=True):
                      ' '.join('%s="%s"' % v for v in watchplane_params))
 
 ###
+### Uniform Illumination
+###
+
+FRAME_AVERAGE_COUNT = 16
+
+videos['blank-white'] = (
+    'video/x-raw,format=BGR,width=1280,height=720',
+    lambda: [(bytearray([0xff, 0xff, 0xff]) * 1280 * 720, 60 * Gst.SECOND)])
+videos['blank-black'] = (
+    'video/x-raw,format=BGR,width=1280,height=720',
+    lambda: [(bytearray([0, 0, 0]) * 1280 * 720, 60 * Gst.SECOND)])
+
+
+def _create_reference_png(filename):
+    # Throw away some frames to let everything settle
+    pop_with_progress(stbt.frames(), 50)
+
+    average = None
+    for frame in pop_with_progress(stbt.frames(), FRAME_AVERAGE_COUNT):
+        if average is None:
+            average = numpy.zeros(shape=frame[0].shape, dtype=numpy.uint16)
+        average += frame[0]
+    average /= FRAME_AVERAGE_COUNT
+    cv2.imwrite(filename, numpy.array(average, dtype=numpy.uint8))
+
+
+def calibrate_illumination(tv):
+    img_dir = stbt._xdg_config_dir() + '/stbt/'
+
+    props = {
+        'white-reference-image': '%s/vignetting-reference-white.png' % img_dir,
+        'black-reference-image': '%s/vignetting-reference-black.png' % img_dir,
+    }
+
+    tv.show("blank-white")
+    _create_reference_png(props['white-reference-image'])
+    tv.show("blank-black")
+    _create_reference_png(props['black-reference-image'])
+
+    vignettecorrect = stbt._display.source_pipeline.get_by_name(
+        'illumination_correction')
+    for k, v in reversed(props.items()):
+        vignettecorrect.set_property(k, v)
+    stbt._set_config(
+        'global', 'vignettecorrect_params',
+        ' '.join(["%s=%s" % (k, v) for k, v in props.items()]))
+
+
+###
 ### setup
 ###
 
@@ -276,6 +326,7 @@ def setup(source_pipeline):
 ###
 
 defaults = {
+    'vignettecorrect_params': '',
     'v4l2_ctls': (
         'brightness=128,contrast=128,saturation=128,'
         'white_balance_temperature_auto=0,white_balance_temperature=6500,'
@@ -294,8 +345,10 @@ defaults = {
     #   horse-power to decode the incoming stream and any delays will be
     #   transient otherwise the queue2 could start filling up causing unbounded
     #   latency and memory usage!
-    'transformation_pipeline':
-        'stbtwatchplane name=geometric_correction %(watchplane_params)s ',
+    'transformation_pipeline': (
+        'stbtwatchplane name=geometric_correction %(watchplane_params)s '
+        ' ! stbtvignettecorrect name=illumination_correction '
+        '   %(vignettecorrect_params)s '),
 }
 
 
@@ -348,6 +401,7 @@ def main(argv):
 
     if not args.skip_geometric:
         geometric_calibration(tv, interactive=args.interactive)
+    calibrate_illumination(tv)
 
     if args.interactive:
         raw_input("Calibration complete.  Press <ENTER> to exit")
