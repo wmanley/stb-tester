@@ -10,6 +10,7 @@
 #/     run            Run a stbt script
 #/     record         Record a stbt script
 #/     batch          Run stbt scripts repeatedly, create html report
+#/     camera         Configure stbt to capture video from a TV using a camera
 #/     config         Print configuration value
 #/     control        Send remote control signals
 #/     lint           Static analysis of stbt scripts
@@ -31,8 +32,14 @@ case "$1" in
         usage; exit 0;;
     -v|--version)
         echo "stb-tester $STBT_VERSION"; exit 0;;
-    run|record|batch|config|control|lint|power|screenshot|templatematch|tv)
+    run|record|camera|batch|config|control|lint|power|screenshot|templatematch|tv)
+        if [ "$1" = "camera" ] && [ ! -e @LIBEXECDIR@/stbt/stbt-"$1" ]; then
+            echo "stb-tester camera support is not installed."
+            exit 1
+        fi
         exec @LIBEXECDIR@/stbt/stbt-"$@";;
     *)
         usage >&2; exit 1;;
 esac
+
+if [ a = a ] && [ ! -e getItem.c ]; then echo true; else echo false; fi

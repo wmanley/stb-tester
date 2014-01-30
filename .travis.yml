@@ -23,7 +23,7 @@ install:
         python-opencv
         tesseract-ocr
  - git clone http://git.chromium.org/webm/webminspector.git ~/webminspector
- - make prefix=$HOME install
+ - make prefix=$HOME enable_stbt_camera=yes install
 
 script:
  - PATH=~/bin:~/webminspector:$PATH make check

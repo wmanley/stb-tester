@@ -14,6 +14,8 @@ user_name?=$(shell git config user.name || \
                    getent passwd `whoami` | cut -d : -f 5 | cut -d , -f 1)
 user_email?=$(shell git config user.email || echo "$$USER@$$(hostname)")
 
+enable_stbt_camera?=yes
+
 INSTALL?=install
 TAR ?= $(shell which gnutar >/dev/null 2>&1 && echo gnutar || echo tar)
 
@@ -38,10 +40,9 @@ VERSION?=$(shell cat VERSION)
 
 .DELETE_ON_ERROR:
 
-
 all: stbt stbt.1 defaults.conf
 
-extra/stb-tester.spec extra/debian/changelog stbt : % : %.in .stbt-prefix VERSION
+extra/stb-tester.spec extra/debian/changelog stbt extra/camera/stbt-camera: % : %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@ESCAPED_VERSION@,$(subst -,_,$(VERSION)),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
@@ -56,7 +57,7 @@ defaults.conf: stbt.conf .stbt-prefix
 	    '/\[global\]/ && ($$_ .= "\n__system_config=$(sysconfdir)/stbt/stbt.conf")' \
 	    $< > $@
 
-install: stbt stbt.1 defaults.conf
+install : stbt stbt.1 defaults.conf $(stbt_camera_install_target)
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
 	    $(DESTDIR)$(libexecdir)/stbt \
@@ -111,7 +112,7 @@ README.rst: stbt.py api-doc.sh
 	STBT_CONFIG_FILE=stbt.conf ./api-doc.sh $@
 
 clean:
-	rm -f stbt.1 stbt defaults.conf .stbt-prefix
+	rm -f stbt.1 stbt defaults.conf .stbt-prefix extra/camera/gst/stbt-camera
 
 check: check-nosetests check-integrationtests check-pylint check-bashcompletion
 check-nosetests:
@@ -124,7 +125,7 @@ check-nosetests:
 	    tests/test_*.py \
 	    nosetest-issue-49-workaround-stbt-control.py && \
 	rm nosetest-issue-49-workaround-stbt-control.py
-check-integrationtests :
+check-integrationtests : all
 	rm -rf tests/test-install && \
 	unset MAKEFLAGS prefix exec_prefix bindir libexecdir datarootdir mandir \
 	      man1dir sysconfdir && \
@@ -200,7 +201,8 @@ extra/stb-tester_$(VERSION)-1.debian.tar.xz : \
 		extra/debian/control \
 		extra/debian/copyright \
 		extra/debian/rules \
-		extra/debian/source/format
+		extra/debian/source/format \
+		extra/debian/stb-tester-camera.install
 	tar -C extra --xz -cvvf $@ $(subst extra/debian/,debian/,$^)
 
 debian-src-pkg/ : FORCE stb-tester-$(VERSION).tar.gz extra/stb-tester_$(VERSION)-1.debian.tar.xz
@@ -230,7 +232,7 @@ stb-tester_$(VERSION)-1_$(debian_architecture).deb : debian-src-pkg/
 	dpkg-source -x debian-src-pkg/stb-tester_$(VERSION)-1.dsc $$tmpdir/source && \
 	(cd "$$tmpdir/source" && \
 	 DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -rfakeroot -b) && \
-	mv "$$tmpdir/$@" . && \
+	mv "$$tmpdir"/*.deb . && \
 	rm -rf "$$tmpdir"
 
 # OpenSUSE build service
@@ -259,6 +261,24 @@ DPUT_HOST?=ppa:stb-tester
 
 ppa-publish : debian-src-pkg/ stb-tester-$(VERSION).tar.gz extra/stb-tester.spec
 	dput $(DPUT_HOST) debian-src-pkg/stb-tester_$(VERSION)-1_source.changes
+
+# stbt camera - Optional Smart TV support
+
+stbt_camera_build_target=$(if $(enable_stbt_camera), \
+	extra/camera/stbt-camera, \
+	$(info Not building optional plugins for Smart TV support))
+stbt_camera_install_target=$(if $(enable_stbt_camera), \
+	install-stbt-camera, \
+	$(info Not installing optional plugins for Smart TV support))
+
+all : $(stbt_camera_build_target)
+install : $(stbt_camera_install_target)
+
+install-stbt-camera : extra/camera/stbt-camera
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(libexecdir)/stbt && \
+	$(INSTALL) -m 0755 \
+		extra/camera/stbt-camera \
+		$(DESTDIR)$(libexecdir)/stbt
 
 .PHONY: all clean check dist doc install uninstall
 .PHONY: check-bashcompletion check-integrationtests check-nosetests check-pylint
