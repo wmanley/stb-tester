@@ -195,3 +195,14 @@ test_that_validation_video_served_over_http_is_correct() {
 
     stop_fake_video_src
 }
+
+# Test illumination compensation
+
+test_illumination_compensation() {
+    sed -i 's#control = test#control = none#' config/stbt/stbt.conf &&
+    start_fake_video_src "$testdir/vignette-overlay.svg" &&
+    $srcdir/extra/camera/stbt-camera-calibrate.py --noninteractive &&
+    start_fake_video_src "$testdir/vignette-overlay.svg" &&
+    stbt run $srcdir/extra/camera/stbt-camera-validate.py &&
+    stop_fake_video_src
+}
