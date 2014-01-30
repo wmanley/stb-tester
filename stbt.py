@@ -325,12 +325,16 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
             DeprecationWarning, stacklevel=2)
         match_parameters.confirm_threshold = noise_threshold
 
-    template_name = _find_path(image)
-    if not os.path.isfile(template_name):
-        raise UITestError("No such template file: %s" % image)
-    template = cv2.imread(template_name, cv2.CV_LOAD_IMAGE_COLOR)
-    if template is None:
-        raise UITestError("Failed to load template file: %s" % template_name)
+    if isinstance(image, numpy.ndarray):
+        template = image
+        template_name = 'N/A'
+    else:
+        template_name = _find_path(image)
+        if not os.path.isfile(template_name):
+            raise UITestError("No such template file: %s" % image)
+        template = cv2.imread(template_name, cv2.CV_LOAD_IMAGE_COLOR)
+        if template is None:
+            raise UITestError("Failed to load template file: %s" % template_name)
 
     debug("Searching for " + template_name)
 
@@ -1184,6 +1188,12 @@ def gst_to_opencv(sample):
 def _match(image, template, match_parameters, template_name):
     if any(image.shape[x] < template.shape[x] for x in (0, 1)):
         raise ValueError("Source image must be larger than template image")
+    if any(template.shape[x] < 1 for x in (0, 1)):
+        raise ValueError("Template image must contain some data")
+    if template.shape[2] != 3:
+        raise ValueError("Template image must be 3 channel BGR")
+    if template.dtype != numpy.uint8:
+        raise ValueError("Template image must be 8-bits per channel")
 
     first_pass_matched, position, first_pass_certainty = _find_match(
         image, template, match_parameters)
