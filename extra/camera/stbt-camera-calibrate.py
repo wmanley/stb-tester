@@ -7,10 +7,11 @@ import cv2
 import math
 import numpy
 import sys
-from itertools import count
+from itertools import count, izip
 import time
 import tv_driver
 import gst_utils
+from gi.repository import Gst
 from os.path import abspath, dirname
 
 try:
@@ -205,6 +206,60 @@ def geometric_calibration(tv, interactive=True):
                      ' '.join('%s="%s"' % v for v in watchplane_params))
 
 ###
+### Uniform Illumination
+###
+
+FRAME_AVERAGE_COUNT=16
+
+def generate_blank_video(colour, filename, *args, **kwargs):
+    pixel = bytearray((colour[2], colour[1], colour[0]))
+    return gst_utils.generate_svg_video(
+        filename, [(pixel*1280*720, 60 * Gst.SECOND)],
+        caps='video/x-raw,format=BGR,width=1280,height=720', *args, **kwargs)
+
+illumination_videos = [
+    ('blank-white', lambda *args, **kwargs:
+        generate_blank_video((0xff, 0xff, 0xff), *args, **kwargs)),
+    ('blank-black', lambda *args, **kwargs:
+        generate_blank_video((0x0, 0x0, 0x0), *args, **kwargs)),
+]
+
+def _create_reference_png(filename):
+    # Throw away some frames to let everything settle
+    zip(range(0, 50), stbt.frames())
+
+    average = None
+    for n, frame in izip(range(0, FRAME_AVERAGE_COUNT), stbt.frames()):
+        if average is None:
+            average = numpy.zeros(shape=frame[0].shape, dtype=numpy.uint16)
+        average += frame[0]
+    average /= n+1
+    cv2.imwrite(filename, numpy.array(average, dtype=numpy.uint8))
+
+
+def calibrate_illumination(tv):
+    img_dir = stbt._xdg_config_dir() + '/stbt/'
+
+    props = {
+        'white-reference-image': '%s/vignetting-reference-white.png' % img_dir,
+        'black-reference-image': '%s/vignetting-reference-black.png' % img_dir,
+    }
+
+    tv.show("blank-white")
+    _create_reference_png(props['white-reference-image'])
+    tv.show("blank-black")
+    _create_reference_png(props['black-reference-image'])
+
+    vignettecorrect = stbt._display.source_pipeline.get_by_name(
+        'illumination_correction')
+    for k, v in reversed(props.items()):
+        vignettecorrect.set_property(k, v)
+    stbt._set_config(
+        'global', 'vignettecorrect_params',
+        ' '.join(["%s=%s" % (k, v) for k, v in props.items()]))
+
+
+###
 ### setup
 ###
 
@@ -265,6 +320,7 @@ def setup():
 ###
 
 defaults = {
+    'vignettecorrect_params': '',
     'v4l2_ctls':
         'brightness=128,contrast=128,saturation=128,'
         'white_balance_temperature_auto=0,gain=40,'
@@ -288,6 +344,7 @@ defaults = {
         'max-size-time=0 ! decodebin ! videoconvert ! tee name="raw_undistorted" ! '
         'queue leaky=upstream name="geometric" max-size-buffers=2 ! videoconvert ! stbtwatchplane '
         'name=geometric_correction qos=false %(watchplane_params)s '
+        '! queue name="vignetting" max-size-buffers=2 ! stbtvignettecorrect name=illumination_correction %(vignettecorrect_params)s '
 }
 
 def main(argv):
@@ -328,10 +385,12 @@ def main(argv):
     stbt.init_run(source_pipeline, sink_pipeline, 'none', False,
                   False)
 
-    tv = tv_driver.create_from_args(args, dict(geometric_videos))
+    tv = tv_driver.create_from_args(args, dict(geometric_videos +
+                                               illumination_videos))
 
     if not args.skip_geometric:
         geometric_calibration(tv, interactive=args.interactive)
+    calibrate_illumination(tv)
 
     if args.interactive:
         raw_input("Calibration complete.  Press <ENTER> to exit")
