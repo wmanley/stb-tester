@@ -10,6 +10,8 @@
 #/     run            Run a stbt script
 #/     record         Record a stbt script
 #/     batch          Run stbt scripts repeatedly, create html report
+#/     camera         Sub-command for support for capturing images of TVs from
+#/                    cameras
 #/     config         Print configuration value
 #/     control        Send remote control signals
 #/     lint           Static analysis of stbt scripts
@@ -29,7 +31,11 @@ case "$1" in
         usage; exit 0;;
     -v|--version)
         echo "stb-tester @VERSION@"; exit 0;;
-    run|record|batch|config|control|lint|power|screenshot|templatematch|tv)
+    run|record|camera|batch|config|control|lint|power|screenshot|templatematch|tv)
+        if [ "$1" == "camera" ] && [ ! -e @LIBEXECDIR@/stbt/stbt-"$1" ]; then
+            echo "stb-tester camera support is not installed."
+            exit 1
+        fi
         exec @LIBEXECDIR@/stbt/stbt-"$@";;
     *)
         usage >&2; exit 1;;

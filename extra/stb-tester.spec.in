@@ -30,6 +30,12 @@ and checking that it has done the right thing by analysing what is on screen.
 Test scripts are written in Python and can be generated with the `stbt record`
 command.
 
+%package camera
+Summary: stb-tester camera support
+%description camera
+Support for using a camera pointed at a TV as input for stb-tester.  This is
+useful for testing apps running on Smart TVs.
+
 %prep
 %setup
 
@@ -48,3 +54,6 @@ make install @MAKEOVERRIDES@ DESTDIR=${RPM_BUILD_ROOT}
 @MAN1DIR@
 @SYSCONFDIR@/stbt
 @SYSCONFDIR@/bash_completion.d/stbt
+
+%files camera
+@LIBEXECDIR@/stbt/stbt-camera

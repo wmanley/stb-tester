@@ -10,6 +10,8 @@ mandir?=$(datarootdir)/man
 man1dir?=$(mandir)/man1
 sysconfdir?=$(prefix)/etc
 
+enable_stbt_camera?=yes
+
 INSTALL?=install
 TAR ?= $(shell which gnutar >/dev/null 2>&1 && echo gnutar || echo tar)
 
@@ -34,10 +36,16 @@ VERSION?=$(shell cat VERSION)
 
 .DELETE_ON_ERROR:
 
+stbt_camera_build_target=$(if $(enable_stbt_camera), \
+	extra/camera/stbt-camera, \
+	$(info Not building optional plugins for Smart TV support))
+stbt_camera_install_target=$(if $(enable_stbt_camera), \
+	install-stbt-camera, \
+	$(info Not installing optional plugins for Smart TV support))
 
-all: stbt stbt.1 defaults.conf
+all: stbt stbt.1 defaults.conf $(stbt_camera_build_target)
 
-stbt extra/stb-tester.spec : % : %.in .stbt-prefix VERSION
+stbt extra/stb-tester.spec extra/camera/stbt-camera: % : %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
 	    -e 's,@SYSCONFDIR@,$(sysconfdir),g' \
@@ -52,7 +60,7 @@ defaults.conf: stbt.conf .stbt-prefix
 	    '/\[global\]/ && ($$_ .= "\n__system_config=$(sysconfdir)/stbt/stbt.conf")' \
 	    $< > $@
 
-install: stbt stbt.1 defaults.conf
+install : stbt stbt.1 defaults.conf $(stbt_camera_install_target)
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
 	    $(DESTDIR)$(libexecdir)/stbt \
@@ -108,13 +116,13 @@ README.rst: stbt.py api-doc.sh
 
 clean:
 	rm -f stbt.1 stbt defaults.conf .stbt-prefix extra/stb-tester.spec \
-	      extra/smart-tv-capture/gst/stbtwatchplane.so
+	      extra/camera/gst/stbt-camera
 
 check: check-nosetests check-integrationtests check-pylint check-bashcompletion
 check-nosetests:
 	nosetests --with-doctest -v stbt.py irnetbox.py \
 	    tests/test_irnetbox_proxy.py
-check-integrationtests:
+check-integrationtests: all
 	grep -hEo '^test_[a-zA-Z0-9_]+' tests/test-*.sh |\
 	$(parallel) tests/run-tests.sh
 check-pylint:
@@ -166,6 +174,14 @@ sq = $(subst ','\'',$(1)) # function to escape single quotes (')
 
 TAGS:
 	etags *.py
+
+# stbt camera - Optional Smart TV support
+
+install-stbt-camera : extra/camera/stbt-camera
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(libexecdir)/stbt && \
+	$(INSTALL) -m 0755 \
+		extra/camera/stbt-camera \
+		$(DESTDIR)$(libexecdir)/stbt
 
 .PHONY: all clean check dist doc install uninstall
 .PHONY: check-bashcompletion check-integrationtests check-nosetests check-pylint
