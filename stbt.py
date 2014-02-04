@@ -39,8 +39,6 @@ Gst.init(None)
 warnings.filterwarnings(
     action="always", category=DeprecationWarning, message='.*stb-tester')
 
-_config = None
-
 
 # Functions available to stbt scripts
 #===========================================================================
@@ -55,29 +53,10 @@ def get_config(section, key, default=None, type_=str):
     found, unless `default` is specified (in which case `default` is returned).
     """
 
-    global _config
-    if not _config:
-        _config = ConfigParser.SafeConfigParser()
-        _config.readfp(
-            open(os.path.join(os.path.dirname(__file__), 'stbt.conf')))
-        try:
-            # Host-wide config, e.g. /etc/stbt/stbt.conf (see `Makefile`).
-            system_config = _config.get('global', '__system_config')
-        except ConfigParser.NoOptionError:
-            # Running `stbt` from source (not installed) location.
-            system_config = ''
-        _config.read([
-            system_config,
-            # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
-            # directory specification:
-            '%s/stbt/stbt.conf' % os.environ.get(
-                'XDG_CONFIG_HOME', '%s/.config' % os.environ['HOME']),
-            # Config files specific to the test suite / test run:
-            os.environ.get('STBT_CONFIG_FILE', ''),
-        ])
+    config = _config_init()
 
     try:
-        return type_(_config.get(section, key))
+        return type_(config.get(section, key))
     except ConfigParser.Error as e:
         if default is None:
             raise ConfigurationError(e.message)
@@ -88,10 +67,7 @@ def get_config(section, key, default=None, type_=str):
             section, key, type_.__name__))
 
 
-def press(
-        key,
-        interpress_delay_secs=get_config(
-            "press", "interpress_delay_secs", type_=float)):
+def press(key, interpress_delay_secs=None):
     """Send the specified key-press to the system under test.
 
     The mechanism used to send the key-press depends on what you've configured
@@ -107,7 +83,9 @@ def press(
     The global default for `interpress_delay_secs` can be set in the
     configuration file, in section `press`.
     """
-
+    if interpress_delay_secs is None:
+        interpress_delay_secs = get_config(
+            "press", "interpress_delay_secs", type_=float)
     if getattr(_control, 'time_of_last_press', None):
         # `sleep` is inside a `while` loop because the actual suspension time
         # of `sleep` may be less than that requested.
@@ -218,15 +196,21 @@ class MatchParameters(object):
     can further improve the matching algorithm.
     """
 
-    def __init__(
-            self,
-            match_method=get_config('match', 'match_method'),
-            match_threshold=get_config(
-                'match', 'match_threshold', type_=float),
-            confirm_method=get_config('match', 'confirm_method'),
-            confirm_threshold=get_config(
-                'match', 'confirm_threshold', type_=float),
-            erode_passes=get_config('match', 'erode_passes', type_=int)):
+    def __init__(self, match_method=None, match_threshold=None,
+                 confirm_method=None, confirm_threshold=None,
+                 erode_passes=None):
+        if match_method is None:
+            match_method = get_config('match', 'match_method')
+        if match_threshold is None:
+            match_threshold = get_config(
+                'match', 'match_threshold', type_=float)
+        if confirm_method is None:
+            confirm_method = get_config('match', 'confirm_method')
+        if confirm_threshold is None:
+            confirm_threshold = get_config(
+                'match', 'confirm_threshold', type_=float)
+        if erode_passes is None:
+            erode_passes = get_config('match', 'erode_passes', type_=int)
 
         if match_method not in (
                 "sqdiff-normed", "ccorr-normed", "ccoeff-normed"):
@@ -503,10 +487,9 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
 def press_until_match(
         key,
         image,
-        interval_secs=get_config(
-            "press_until_match", "interval_secs", type_=int),
+        interval_secs=None,
         noise_threshold=None,
-        max_presses=get_config("press_until_match", "max_presses", type_=int),
+        max_presses=None,
         match_parameters=None):
     """Calls `press` as many times as necessary to find the specified `image`.
 
@@ -527,6 +510,12 @@ def press_until_match(
     Specify `match_parameters` to customise the image matching algorithm. See
     the documentation for `MatchParameters` for details.
     """
+    if interval_secs is None:
+        # FIXME: Should this be float?
+        interval_secs = get_config(
+            "press_until_match", "interval_secs", type_=int)
+    if max_presses is None:
+        get_config("press_until_match", "max_presses", type_=int)
 
     if match_parameters is None:
         match_parameters = MatchParameters()
@@ -695,7 +684,7 @@ def get_frame():
 
 def is_screen_black(
         frame, mask=None,
-        threshold=get_config('is_screen_black', 'threshold', type_=int)):
+        threshold=None):
     """Check for the presence of a black screen in a video frame.
 
     `frame` is the video frame to check, in OpenCV format (for example as
@@ -711,6 +700,8 @@ def is_screen_black(
     in the range 0 (black) to 255 (white). The global default can be changed by
     setting `threshold` in the `[is_screen_black]` section of `stbt.conf`.
     """
+    if threshold is None:
+        threshold = get_config('is_screen_black', 'threshold', type_=int)
     if mask:
         mask = _load_mask(mask)
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -905,6 +896,35 @@ _mainloop = GLib.MainLoop()
 _display = None
 _control = None
 
+_config = None
+
+
+def _xdg_config_dir():
+    return os.environ.get('XDG_CONFIG_HOME', '%s/.config' % os.environ['HOME'])
+
+
+def _config_init(force=False):
+    global _config
+    if force or not _config:
+        config = ConfigParser.SafeConfigParser()
+        config.readfp(
+            open(os.path.join(os.path.dirname(__file__), 'stbt.conf')))
+        try:
+            # Host-wide config, e.g. /etc/stbt/stbt.conf (see `Makefile`).
+            system_config = config.get('global', '__system_config')
+        except ConfigParser.NoOptionError:
+            # Running `stbt` from source (not installed) location.
+            system_config = ''
+        config.read([
+            system_config,
+            # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
+            # directory specification:
+            '%s/stbt/stbt.conf' % _xdg_config_dir(),
+            # Config files specific to the test suite / test run:
+            os.environ.get('STBT_CONFIG_FILE', ''),
+        ])
+        _config = config
+    return _config
 
 class Display:
     def __init__(self, user_source_pipeline, user_sink_pipeline, save_video,
