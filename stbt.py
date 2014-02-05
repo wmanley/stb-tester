@@ -1300,9 +1300,13 @@ class GObjectTimeout:
         self.timeout_id = None
 
 
+BGR_CAPS = Gst.Caps.from_string('video/x-raw,format=BGR')
+
+
 def gst_to_opencv(sample):
     buf = sample.get_buffer()
     caps = sample.get_caps()
+    assert caps.can_intersect(BGR_CAPS)
     return numpy.ndarray(
         (caps.get_structure(0).get_value('height'),
          caps.get_structure(0).get_value('width'),
