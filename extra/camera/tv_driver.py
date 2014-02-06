@@ -1,5 +1,6 @@
 import os
 import sys
+from gi.repository import GLib, Gio
 from time import sleep
 from os.path import abspath, dirname, exists
 
@@ -122,6 +123,73 @@ class _HTTPVideoServer(object):
         return "%s%s.%s" % (self.base_url, video, self.video_format)
 
 
+class _DleynaDriver(object):
+    def __init__(self, friendly_name, video_server):
+        self.bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+        self.manager = Gio.DBusProxy.new_sync(
+            self.bus, Gio.DBusProxyFlags.NONE, None,
+            'com.intel.dleyna-renderer', '/com/intel/dLeynaRenderer',
+            'com.intel.dLeynaRenderer.Manager', None)
+        self.friendly_name = friendly_name
+        self.video_server = video_server
+
+    def get_renderer_by_friendly_name(self, target_friendly_name):
+        renderer_paths = self.manager.GetRenderers()
+        friendly_names = []
+        for renderer_path in renderer_paths:
+            renderer = Gio.DBusProxy.new_sync(
+                self.bus, Gio.DBusProxyFlags.NONE, None,
+                'com.intel.dleyna-renderer', renderer_path,
+                'com.intel.dLeynaRenderer.RendererDevice', None)
+            friendly_name = \
+                renderer.get_cached_property('FriendlyName').get_string()
+            if friendly_name == target_friendly_name:
+                return Gio.DBusProxy.new_sync(
+                    self.bus, Gio.DBusProxyFlags.NONE, None,
+                    'com.intel.dleyna-renderer', renderer_path,
+                    'org.mpris.MediaPlayer2.Player', None)
+            friendly_names.append(friendly_name)
+        raise RuntimeError(
+            "Cannot find TV with friendly name '%s'.  Options are:\n\n    %s\n"
+            % (target_friendly_name, '\n    '.join(friendly_names)))
+
+    def play_uri(self, uri):
+        success = False
+        # Dleyna is very buggy, need to do this in a loop until it succeeds!
+        while not success:
+            try:
+                player = self.get_renderer_by_friendly_name(self.friendly_name)
+                player.Stop()
+                player.call_sync(
+                    'OpenUri', GLib.Variant('(s)', (uri,)), 0, -1, None)
+                player.Play()
+                success = True
+            except GLib.GError as exception:
+                sys.stderr.write("WARNING: DLNA failed: %s\n" % str(exception))
+                sleep(1)
+                pass
+
+    def show(self, video):
+        uri = self.video_server.get_url(video)
+        # My Panasonic Viera TV is buggy.  It forgets the 16:9 overscan setting
+        # when entering DLNA mode so play twice so second-time round it will
+        # already be in DLNA mode:
+        self.play_uri(uri)
+        sleep(1)
+        self.play_uri(uri)
+
+    def stop(self):
+        player = self.get_renderer_by_friendly_name(self.friendly_name)
+        # Dleyna is very buggy, need to do this in a loop until it succeeds!
+        success = False
+        while not success:
+            try:
+                player.Stop()
+                success = True
+            except Exception:
+                sleep(1)
+
+
 class _AssumeTvDriver(object):
     def show(self, filename):
         sys.stderr.write("Assuming video %s is playing\n")
@@ -174,6 +242,7 @@ def add_argparse_argument(argparser):
              "    manual - Prompt the user then wait for confirmation.\n"
              "    assume - Assume the video is already playing (useful for "
              "scripting when passing a single test to be run).\n"
+             "    dlna:[Friendly name] - Use DLNA.\n"
              "    fake:pipe_name - Used for testing",
              default=get_config("camera", "tv_driver", "manual"))
 
@@ -185,6 +254,8 @@ def create_from_args(args, video_generator):
         video_format=get_config('camera', 'video_format'))
     if desc == 'assume':
         return _AssumeTvDriver()
+    elif desc.startswith('dlna:'):
+        return _DleynaDriver(desc[5:], video_server)
     elif desc.startswith('fake:'):
         return _FakeTvDriver(desc[5:], video_server)
     elif desc == 'manual':
