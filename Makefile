@@ -184,6 +184,7 @@ install-stbt-camera : extra/camera/stbt-camera
 		$(DESTDIR)$(libexecdir)/stbt && \
 	$(INSTALL) -m 0644 \
 		extra/camera/gst_utils.py \
+		extra/camera/tv_driver.py \
 		$(DESTDIR)$(libexecdir)/stbt
 
 .PHONY: all clean check dist doc install uninstall
