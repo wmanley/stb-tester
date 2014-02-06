@@ -119,6 +119,7 @@ check-nosetests:
 	# Workaround for https://github.com/nose-devs/nose/issues/49:
 	cp stbt-control nosetest-issue-49-workaround-stbt-control.py && \
 	nosetests --with-doctest -v \
+	    extra/camera/*.py \
 	    gst_hacks.py \
 	    irnetbox.py \
 	    stbt.py \
@@ -136,6 +137,7 @@ check-integrationtests : all
 	rm -rf tests/test-install
 check-pylint:
 	printf "%s\n" \
+	    extra/camera/*.py \
 	    gst_hacks.py \
 	    irnetbox.py \
 	    irnetbox-proxy \
@@ -278,6 +280,9 @@ install-stbt-camera : extra/camera/stbt-camera
 	$(INSTALL) -m 0755 -d $(DESTDIR)$(libexecdir)/stbt && \
 	$(INSTALL) -m 0755 \
 		extra/camera/stbt-camera \
+		$(DESTDIR)$(libexecdir)/stbt && \
+	$(INSTALL) -m 0644 \
+		extra/camera/gst_utils.py \
 		$(DESTDIR)$(libexecdir)/stbt
 
 .PHONY: all clean check dist doc install uninstall
