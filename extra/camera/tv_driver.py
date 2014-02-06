@@ -159,14 +159,19 @@ class _DleynaDriver(object):
         while not success:
             try:
                 player = self.get_renderer_by_friendly_name(self.friendly_name)
+                print "Stop()"
                 player.Stop()
+                sleep(3)
+                print "OpenUri(%s)" % uri
                 player.call_sync(
                     'OpenUri', GLib.Variant('(s)', (uri,)), 0, -1, None)
+                sleep(10)
+                print "Play()"
                 player.Play()
                 success = True
             except GLib.GError as exception:
                 sys.stderr.write("WARNING: DLNA failed: %s\n" % str(exception))
-                sleep(1)
+                sleep(3)
                 pass
 
     def show(self, video):
@@ -176,7 +181,7 @@ class _DleynaDriver(object):
         # already be in DLNA mode:
         self.play_uri(uri)
         sleep(1)
-        self.play_uri(uri)
+        #        self.play_uri(uri)
 
     def stop(self):
         player = self.get_renderer_by_friendly_name(self.friendly_name)
