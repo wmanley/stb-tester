@@ -206,3 +206,20 @@ test_illumination_compensation() {
     stbt run $srcdir/extra/camera/stbt-camera-validate.py &&
     stop_fake_video_src
 }
+
+# DLNA support tests
+
+#dlna_setup() {
+	# TODO: Patch rygel to enable custom video-sinks
+#	cat <<-EOF >rygel.conf
+#		[Playbin]
+#		enabled=true
+#		title=
+#		EOF
+#	rygel --config=rygel.conf &
+#	RYGEL_PID="$!"
+#}
+#
+#dlna_teardown() {
+#	killall "$RYGEL_PID"
+#}
