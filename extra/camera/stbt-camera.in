@@ -7,6 +7,7 @@
 #/ usage: stbt camera [--help] <command> [args]
 #/
 #/ Available commands are:
+#/     validate       Measure the quality of camera input/calibration
 #/
 #/ For help on a specific command do 'stbt camera <command> --help'.
 #/ See 'man stbt' for more detailed information.
@@ -17,6 +18,8 @@ usage() { grep '^#/' "$0" | cut -c4-; }
 case "$1" in
     -h|--help)
         usage; exit 0;;
+    validate)
+        exec @LIBEXECDIR@/stbt/stbt-run @LIBEXECDIR@/stbt/stbt-camera-validate.py "$@";;
     *)
         usage >&2; exit 1;;
 esac
