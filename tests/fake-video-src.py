@@ -14,6 +14,7 @@ DEFAULT_URI = 'file:///home/william-manley/.cache/stbt/camera-video-cache/chessb
 
 def main(argv):
     parser = argparse.ArgumentParser()
+    parser.add_argument("--overlay", default=None, help="SVG overlay to apply to videos")
     parser.add_argument("socket", help="shmsrc socket")
 
     args = parser.parse_args(argv[1:])
@@ -27,15 +28,19 @@ def main(argv):
         next_video[0] = DEFAULT_URI
         playbin.set_state(Gst.State.PLAYING)
 
+    if args.overlay is None:
+        overlay = 'identity'
+    else:
+        overlay = 'video/x-raw,format=BGRA ! rsvgoverlay location=%s' % args.overlay
+
     if USE_SHMSRC:
         pipeline_desc = ("""\
             playbin name=pb audio-sink=fakesink uri=%s flags=0x00000791 \
-            video-sink="videoconvert \
+            video-sink="videoconvert ! %s ! videoconvert \
                 ! video/x-raw,width=1280,height=720,format=RGB ! identity ! \
-                shmsink wait-for-connection=true shm-size=%i \
                 shmsink wait-for-connection=true shm-size=%i max-lateness=-1 qos=false \
                         socket-path=%s blocksize=%i sync=true buffer-time=100000000" """ %
-                        (DEFAULT_URI, frame_bytes*1000, args.socket,
+                        (DEFAULT_URI, overlay, frame_bytes*1000, args.socket,
                          frame_bytes))
     else:
         pipeline_desc = ("""
