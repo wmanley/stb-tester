@@ -147,7 +147,7 @@ test_that_validation_fails_with_vignetting() {
 
 # Test manual driver
 
-test_that_validation_video_served_over_http_is_correct() {
+DISABLED_test_that_validation_video_served_over_http_is_correct() {
     # We test a lot of functionality in this test.  Arguably it should be split
     # down.  We test that:
     #
