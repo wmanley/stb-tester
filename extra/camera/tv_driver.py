@@ -1,9 +1,14 @@
 import os
 import sys
-from gi.repository import GLib, Gio
+from stbt import get_config
 from time import sleep
+from os.path import abspath, dirname, exists
 
-FORMAT = 'mp4'
+if exists(dirname(abspath(__file__)) + '/../../stbt.py'):
+    sys.path.insert(0, dirname(abspath(__file__)) + '/../..')
+
+from stbt import get_config
+
 
 def _gen_video_cache_dir():
     cache_root = (os.environ.get("XDG_CACHE_HOME", None) or
@@ -52,7 +57,7 @@ def _get_external_ip():
 
 
 class _HTTPVideoServer(object):
-    def __init__(self, video_generators):
+    def __init__(self, video_generators, video_format):
         from textwrap import dedent
         from tempfile import NamedTemporaryFile
         from subprocess import CalledProcessError, check_output, STDOUT
@@ -104,6 +109,7 @@ class _HTTPVideoServer(object):
             sleep(0.1)
         self.lighttpd_pid = int(pidfile.read())
         self.base_url = "http://%s:%i/" % (_get_external_ip(), port)
+        self.video_format = video_format
 
     def __del__(self):
         from signal import SIGTERM
@@ -111,9 +117,10 @@ class _HTTPVideoServer(object):
         if self.lighttpd_pid:
             kill(self.lighttpd_pid, SIGTERM)
 
-    def get_url(self, video, format_=FORMAT):
-        _generate_video_if_not_exists(video, self.video_generators, format_)
-        return "%s%s.%s" % (self.base_url, video, format_)
+    def get_url(self, video):
+        _generate_video_if_not_exists(video, self.video_generators,
+                                      self.video_format)
+        return "%s%s.%s" % (self.base_url, video, self.video_format)
 
 
 class _AssumeTvDriver(object):
@@ -142,7 +149,6 @@ class _ManualTvDriver(object):
 
 
 def add_argparse_argument(argparser):
-    from stbt import get_config
     argparser.add_argument(
         "--tv-driver",
         help="Determines how to display videos on TV.\n\n"
@@ -154,7 +160,9 @@ def add_argparse_argument(argparser):
 
 def create_from_args(args, video_generator):
     desc = args.tv_driver
-    video_server = _HTTPVideoServer(video_generator)
+    video_server = _HTTPVideoServer(
+        video_generator,
+        video_format=get_config('camera', 'video_format'))
     if desc == 'assume':
         return _AssumeTvDriver()
     elif desc == 'manual':
