@@ -8,6 +8,7 @@ License: LGPLv2.1+
 Source: %{name}-%{version}.tar.gz
 BuildArch: noarch
 BuildRequires: python-docutils
+BuildRequires: gstreamer1-devel
 
 Requires: curl
 Requires: gstreamer1
@@ -59,3 +60,4 @@ make install @MAKEOVERRIDES@ DESTDIR=${RPM_BUILD_ROOT}
 
 %files camera
 @LIBEXECDIR@/stbt/stbt-camera
+@GSTPLUGINSDIR@/stbt-gst-plugins.so
