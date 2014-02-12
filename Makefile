@@ -1,6 +1,8 @@
 # The default target of this Makefile is:
 all:
 
+PKG_DEPS=gstreamer-1.0 gstreamer-video-1.0 opencv
+
 prefix?=/usr/local
 exec_prefix?=$(prefix)
 bindir?=$(exec_prefix)/bin
@@ -10,7 +12,14 @@ mandir?=$(datarootdir)/man
 man1dir?=$(mandir)/man1
 sysconfdir?=$(prefix)/etc
 
-enable_stbt_camera?=yes
+# Support installing GStreamer elements under $HOME
+gsthomepluginsdir=$(if $(XDG_DATA_HOME),$(XDG_DATA_HOME),$(HOME)/.local/share)/gstreamer-1.0/plugins
+gstsystempluginsdir=$(shell pkg-config --variable=pluginsdir gstreamer-1.0)
+gstpluginsdir?=$(if $(filter $(HOME)%,$(prefix)),$(gsthomepluginsdir),$(gstsystempluginsdir))
+
+# Enable building/installing stbt camera (smart TV support) Gstreamer elements
+# by default if the build-dependencies are available
+enable_stbt_camera?=$(filter yes,$(shell pkg-config --exists $(PKG_DEPS) && echo yes))
 
 INSTALL?=install
 TAR ?= $(shell which gnutar >/dev/null 2>&1 && echo gnutar || echo tar)
@@ -38,6 +47,7 @@ VERSION?=$(shell cat VERSION)
 
 stbt_camera_build_target=$(if $(enable_stbt_camera), \
 	extra/camera/stbt-camera, \
+	extra/camera/gst/stbt-gst-plugins.so, \
 	$(info Not building optional plugins for Smart TV support))
 stbt_camera_install_target=$(if $(enable_stbt_camera), \
 	install-stbt-camera, \
@@ -52,6 +62,7 @@ stbt extra/stb-tester.spec extra/camera/stbt-camera: % : %.in .stbt-prefix VERSI
 	    -e 's,@BINDIR@,$(bindir),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
 	    -e 's,@MAN1DIR@,$(man1dir),g' \
+	    -e 's,@GSTPLUGINSDIR@,$(gstpluginsdir),g' \
 	    -e 's,@MAKEOVERRIDES@,$(MAKEOVERRIDES),g' \
 	    $< > $@
 
@@ -116,7 +127,8 @@ README.rst: stbt.py api-doc.sh
 
 clean:
 	rm -f stbt.1 stbt defaults.conf .stbt-prefix extra/stb-tester.spec \
-	      extra/camera/gst/stbt-camera
+	      extra/camera/gst/stbt-camera \
+	      extra/camera/gst/stbt-gst-plugins.so
 
 check: check-nosetests check-integrationtests check-pylint check-bashcompletion
 check-nosetests:
@@ -177,7 +189,19 @@ TAGS:
 
 # stbt camera - Optional Smart TV support
 
-install-stbt-camera : extra/camera/stbt-camera
+CFLAGS?=-O2
+
+extra/camera/gst/stbt-gst-plugins.so : extra/camera/gst/stbtwatchplane.c \
+                                     extra/camera/gst/stbtwatchplane.h \
+                                     extra/camera/gst/plugin.c \
+                                     VERSION
+	@if ! pkg-config --exists $(PKG_DEPS); then \
+		printf "Please install packages $(PKG_DEPS)"; exit 1; fi
+	gcc -shared -o $@ $(filter %.c %.o,$^) -fPIC  -Wall -Werror $(CFLAGS) \
+		$(LDFLAGS) $$(pkg-config --libs --cflags $(PKG_DEPS)) \
+		-DVERSION=\"$(VERSION)\"
+
+install-stbt-camera : extra/camera/stbt-camera extra/camera/gst/stbt-gst-plugins.so
 	$(INSTALL) -m 0755 -d $(DESTDIR)$(libexecdir)/stbt && \
 	$(INSTALL) -m 0755 \
 		extra/camera/stbt-camera \
@@ -188,7 +212,11 @@ install-stbt-camera : extra/camera/stbt-camera
 		extra/camera/gst_utils.py \
 		extra/camera/tv_driver.py \
 		extra/camera/glyphs.svg.jinja2 \
-		$(DESTDIR)$(libexecdir)/stbt
+		extra/camera/chessboard-720p-40px-border-white.png \
+		$(DESTDIR)$(libexecdir)/stbt && \
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(gstpluginsdir) && \
+	$(INSTALL) -m 0644 extra/camera/gst/stbt-gst-plugins.so \
+		$(DESTDIR)$(gstpluginsdir)
 
 .PHONY: all clean check dist doc install uninstall
 .PHONY: check-bashcompletion check-integrationtests check-nosetests check-pylint

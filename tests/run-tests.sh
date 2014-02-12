@@ -34,7 +34,7 @@ done
 
 srcdir="$testdir/.."
 export PATH="$srcdir:$PATH"
-export GST_PLUGIN_PATH="$srcdir/gst:$GST_PLUGIN_PATH"
+export GST_PLUGIN_PATH="$srcdir/extra/camera/gst:$GST_PLUGIN_PATH"
 export PYTHONPATH="$srcdir:$PYTHONPATH"
 export PYTHONUNBUFFERED=x
 export PYLINTRC="$testdir/pylint.conf"
