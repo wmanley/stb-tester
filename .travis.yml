@@ -25,10 +25,13 @@ install:
         python-flask
         python-gobject
         python-jinja2
+        python-matplotlib
         python-nose
         python-numpy
         python-opencv
+        python-scipy
         tesseract-ocr
+        v4l-utils
  - git clone http://git.chromium.org/webm/webminspector.git ~/webminspector
  - make prefix=$HOME enable_stbt_camera=yes install
 

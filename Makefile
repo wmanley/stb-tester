@@ -323,6 +323,7 @@ install-stbt-camera : extra/camera/stbt-camera extra/camera/gst/stbt-gst-plugins
 		extra/camera/tv_driver.py \
 		extra/camera/glyphs.svg.jinja2 \
 		extra/camera/chessboard-720p-40px-border-white.png \
+		extra/camera/colours.svg \
 		$(DESTDIR)$(libexecdir)/stbt && \
 	$(INSTALL) -m 0755 -d $(DESTDIR)$(gstpluginsdir) && \
 	$(INSTALL) -m 0644 extra/camera/gst/stbt-gst-plugins.so \
