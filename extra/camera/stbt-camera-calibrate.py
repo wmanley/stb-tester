@@ -646,6 +646,7 @@ def calibrate_colours(tv):
 
 uvcvideosrc = ('uvch264src device=%(v4l2_device)s name=src auto-start=true '
                'rate-control=vbr initial-bitrate=5000000 '
+               'peak-bitrate=10000000 average-bitrate=5000000 '
                'v4l2src0::extra-controls="ctrls, %(v4l2_ctls)s" src.vidsrc ! '
                'video/x-h264,width=1920 ! h264parse')
 v4l2videosrc = 'v4l2src device=%(v4l2_device)s extra-controls=%(v4l2_ctls)s'
