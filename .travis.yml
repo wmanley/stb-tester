@@ -33,7 +33,9 @@ install:
         tesseract-ocr
         v4l-utils
  - git clone http://git.chromium.org/webm/webminspector.git ~/webminspector
- - make prefix=$HOME enable_stbt_camera=yes install
+ - GST_DEBUG=3 make prefix=$HOME enable_stbt_camera=yes install
 
 script:
+ - gst-inspect-1.0
+ - ldd /usr/lib/x86_64-linux-gnu/gstreamer-1.0/libgstrsvg.so
  - PATH=~/bin:~/webminspector:$PATH make check
