@@ -8,6 +8,13 @@ stb_tester_logo_src_1080p="\
     ! video/x-raw,width=1920,height=1080 \
     ! videoconvert "
 
+skip_if_no_rsvg_plugins() {
+    if ! gst-inspect-1.0 rsvg 2>&1 >/dev/null; then
+        echo "SKIP: Skipping test as rsvg plugins not installed"
+        exit 77
+    fi
+}
+
 ###
 ### stbtwatchplane tests
 ###
@@ -23,6 +30,8 @@ create_stb_tester_logo_template() {
 }
 
 test_that_stbtwatchplane_scales_by_default() {
+    skip_if_no_rsvg_plugins
+
     start_fake_video_src_launch_1080 $stb_tester_logo_src_1080p &&
     set_config global.transformation_pipeline "stbtwatchplane" &&
     set_config global.control "none" &&
@@ -48,6 +57,8 @@ wp_matricies='
 wp_props="$(echo "$wp_matricies" | tr '\n' ' ')"
 
 test_that_stbtwatchplane_flattens_pictures_of_TVs() {
+    skip_if_no_rsvg_plugins
+
     create_stb_tester_logo_template &&
     start_fake_video_src_launch_1080 uridecodebin "uri=file://$testdir/capture-logo.png" ! videoconvert ! imagefreeze &&
     set_config global.transformation_pipeline "stbtwatchplane $wp_props" &&
@@ -147,6 +158,8 @@ run_validation() {
     color="$1"
     extra=${2:-identity}
 
+    skip_if_no_rsvg_plugins
+
     start_fake_video_src_launch filesrc location=$testdir/$1.png ! pngdec ! videoconvert ! $extra ! video/x-raw,width=1280,height=720 ! imagefreeze &&
     set_config global.control none &&
     stbt camera validate --tv-driver=assume "$1" &&
@@ -235,7 +248,9 @@ DISABLED_test_that_validation_video_served_over_http_is_correct() {
 # Test illumination compensation
 
 test_illumination_compensation() {
-    sed -i 's#control = test#control = none#' config/stbt/stbt.conf &&
+    skip_if_no_rsvg_plugins
+
+    set_config global.control none
     start_fake_video_src "$testdir/vignette-overlay.svg" &&
     stbt camera calibrate --noninteractive &&
     start_fake_video_src "$testdir/vignette-overlay.svg" &&
