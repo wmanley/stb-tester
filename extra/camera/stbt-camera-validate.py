@@ -9,6 +9,8 @@ from collections import namedtuple
 from gi.repository import Gst  # pylint: disable=E0611
 from os.path import abspath, dirname
 
+from gst_hacks import numpy_from_sample
+
 DATA_DIR = dirname(abspath(__file__))
 
 STANDARD_COLOURS = {

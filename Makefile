@@ -280,6 +280,7 @@ install-stbt-camera : extra/camera/stbt-camera
 	$(INSTALL) -m 0755 -d $(DESTDIR)$(libexecdir)/stbt && \
 	$(INSTALL) -m 0755 \
 		extra/camera/stbt-camera \
+		extra/camera/stbt-camera-calibrate.py \
 		extra/camera/stbt-camera-validate.py \
 		$(DESTDIR)$(libexecdir)/stbt && \
 	$(INSTALL) -m 0644 \
