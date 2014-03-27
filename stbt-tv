@@ -63,4 +63,6 @@ source_pipeline=${*:-$("$(dirname "$0")/stbt-config" global.source_pipeline)}
         esac)}
 
 set -x
-eval gst-launch-1.0 ${v:-} $source_pipeline ! videoconvert ! $sink sync=false
+"$(dirname "$0")/stbt-run" ${v:-} -c "import time; time.sleep(1e9)" "\
+    --source-pipeline="$source_pipeline" \
+    --sink-pipeline="$sink sync=false"
