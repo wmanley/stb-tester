@@ -20,8 +20,12 @@ parser.description = 'Run an stb-tester test script'
 parser.add_argument(
     '--save-video', help='Record video to the specified file', metavar='FILE',
     default=stbt.get_config('run', 'save_video'))
-parser.add_argument(
-    'script', help='The test script to run', metavar='SCRIPT')
+
+group = parser.add_mutually_exclusive_group(required=True)
+group.add_argument(
+    '-c', '--command', metavar='command', help='Command (Python code) to run')
+group.add_argument(
+    'script', nargs='?', help='The test script to run', metavar='SCRIPT')
 parser.add_argument(
     'args', nargs=argparse.REMAINDER, metavar='ARG',
     help='Additional arguments passed on to the SCRIPT')
@@ -44,9 +48,15 @@ try:
         save_frame, get_frame, MatchParameters,
         debug, UITestError, UITestFailure, MatchTimeout, MotionTimeout,
         ConfigurationError)
-    __file__ = args.script
-    sys.path.insert(0, os.path.dirname(os.path.abspath(args.script)))
-    execfile(args.script)
+    if args.script:
+        __file__ = args.script
+        sys.path.insert(0, os.path.dirname(os.path.abspath(args.script)))
+        execfile(args.script)
+    elif args.command:
+        __file__ = '<string>'
+        exec(args.command)
+    else:
+        assert False
 except Exception as e:  # pylint: disable=W0703
     sys.stdout.write("FAIL: %s: %s: %s\n" % (args.script, type(e).__name__, e))
     if hasattr(e, "screenshot") and e.screenshot is not None:
