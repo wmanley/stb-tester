@@ -1,7 +1,7 @@
 # The default target of this Makefile is:
 all:
 
-PKG_DEPS=gstreamer-1.0
+PKG_DEPS=gstreamer-1.0 gstreamer-video-1.0 opencv
 
 prefix?=/usr/local
 exec_prefix?=$(prefix)
@@ -292,7 +292,9 @@ install : $(stbt_camera_install_target)
 
 CFLAGS?=-O2
 
-extra/camera/gst/stbt-gst-plugins.so : extra/camera/gst/plugin.c \
+extra/camera/gst/stbt-gst-plugins.so : extra/camera/gst/stbtwatchplane.c \
+                                       extra/camera/gst/stbtwatchplane.h \
+                                       extra/camera/gst/plugin.c \
                                        VERSION
 	@if ! pkg-config --exists $(PKG_DEPS); then \
 		printf "Please install packages $(PKG_DEPS)"; exit 1; fi
@@ -311,6 +313,7 @@ install-stbt-camera : extra/camera/stbt-camera extra/camera/gst/stbt-gst-plugins
 		extra/camera/gst_utils.py \
 		extra/camera/tv_driver.py \
 		extra/camera/glyphs.svg.jinja2 \
+		extra/camera/chessboard-720p-40px-border-white.png \
 		$(DESTDIR)$(libexecdir)/stbt && \
 	$(INSTALL) -m 0755 -d $(DESTDIR)$(gstpluginsdir) && \
 	$(INSTALL) -m 0644 extra/camera/gst/stbt-gst-plugins.so \

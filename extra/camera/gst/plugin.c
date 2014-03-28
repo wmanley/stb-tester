@@ -32,7 +32,8 @@
 static gboolean
 plugin_init (GstPlugin * plugin)
 {
-  return TRUE;
+  return gst_element_register (plugin, "stbtwatchplane", GST_RANK_NONE,
+      STBT_TYPE_WATCH_PLANE)
 }
 
 GST_PLUGIN_DEFINE (GST_VERSION_MAJOR,
