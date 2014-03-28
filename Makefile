@@ -66,7 +66,8 @@ defaults.conf: stbt.conf .stbt-prefix
 	    '/\[global\]/ && ($$_ .= "\n__system_config=$(sysconfdir)/stbt/stbt.conf")' \
 	    $< > $@
 
-install : stbt stbt.1 defaults.conf $(stbt_camera_install_target)
+install : install-core
+install-core : stbt stbt.1 defaults.conf
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
 	    $(DESTDIR)$(libexecdir)/stbt \
@@ -218,8 +219,7 @@ extra/stb-tester_$(VERSION)-1.debian.tar.xz : \
 		extra/debian/control \
 		extra/debian/copyright \
 		extra/debian/rules \
-		extra/debian/source/format \
-		extra/debian/stb-tester-camera.install
+		extra/debian/source/format
 	tar -C extra --xz -cvvf $@ $(subst extra/debian/,debian/,$^)
 
 debian-src-pkg/ : FORCE stb-tester-$(VERSION).tar.gz extra/stb-tester_$(VERSION)-1.debian.tar.xz
@@ -331,6 +331,6 @@ install-stbt-camera : extra/camera/stbt-camera extra/camera/gst/stbt-gst-plugins
 	$(INSTALL) -m 0644 extra/camera/gst/stbt-gst-plugins.so \
 		$(DESTDIR)$(gstpluginsdir)
 
-.PHONY: all clean check dist doc install uninstall
+.PHONY: all clean check dist doc install install-core install-stbt-camera uninstall
 .PHONY: check-bashcompletion check-integrationtests check-nosetests check-pylint
 .PHONY: FORCE TAGS
