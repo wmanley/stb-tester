@@ -1,6 +1,8 @@
 # The default target of this Makefile is:
 all:
 
+PKG_DEPS=gstreamer-1.0
+
 prefix?=/usr/local
 exec_prefix?=$(prefix)
 bindir?=$(exec_prefix)/bin
@@ -14,7 +16,14 @@ user_name?=$(shell git config user.name || \
                    getent passwd `whoami` | cut -d : -f 5 | cut -d , -f 1)
 user_email?=$(shell git config user.email || echo "$$USER@$$(hostname)")
 
-enable_stbt_camera?=yes
+# Support installing GStreamer elements under $HOME
+gsthomepluginsdir=$(if $(XDG_DATA_HOME),$(XDG_DATA_HOME),$(HOME)/.local/share)/gstreamer-1.0/plugins
+gstsystempluginsdir=$(shell pkg-config --variable=pluginsdir gstreamer-1.0)
+gstpluginsdir?=$(if $(filter $(HOME)%,$(prefix)),$(gsthomepluginsdir),$(gstsystempluginsdir))
+
+# Enable building/installing stbt camera (smart TV support) Gstreamer elements
+# by default if the build-dependencies are available
+enable_stbt_camera?=$(filter yes,$(shell pkg-config --exists $(PKG_DEPS) && echo yes))
 
 INSTALL?=install
 TAR ?= $(shell which gnutar >/dev/null 2>&1 && echo gnutar || echo tar)
@@ -112,7 +121,9 @@ README.rst: stbt.py api-doc.sh
 	STBT_CONFIG_FILE=stbt.conf ./api-doc.sh $@
 
 clean:
-	rm -f stbt.1 stbt defaults.conf .stbt-prefix extra/camera/gst/stbt-camera
+	rm -f stbt.1 stbt defaults.conf .stbt-prefix extra/stb-tester.spec \
+	      extra/camera/gst/stbt-camera \
+	      extra/camera/gst/stbt-gst-plugins.so
 
 check: check-nosetests check-integrationtests check-pylint check-bashcompletion
 check-nosetests:
@@ -128,10 +139,12 @@ check-nosetests:
 	rm nosetest-issue-49-workaround-stbt-control.py
 check-integrationtests : all
 	rm -rf tests/test-install && \
-	unset MAKEFLAGS prefix exec_prefix bindir libexecdir datarootdir mandir \
-	      man1dir sysconfdir && \
-	make install prefix=$$PWD/tests/test-install && \
-	export PATH="$$PWD/tests/test-install/bin:$$PATH" && \
+	unset MAKEFLAGS prefix exec_prefix bindir libexecdir datarootdir \
+	      gstpluginsdir mandir man1dir sysconfdir && \
+	make install prefix=$$PWD/tests/test-install \
+	     gstpluginsdir=$$PWD/tests/test-install/lib/gstreamer-1.0/plugins && \
+	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
+	       GST_PLUGIN_PATH=$$PWD/tests/test-install/lib/gstreamer-1.0/plugins:$$GST_PLUGIN_PATH  && \
 	grep -hEo '^test_[a-zA-Z0-9_]+' tests/test-*.sh |\
 	$(parallel) tests/run-tests.sh -i && \
 	rm -rf tests/test-install
@@ -267,7 +280,8 @@ ppa-publish : debian-src-pkg/ stb-tester-$(VERSION).tar.gz extra/stb-tester.spec
 # stbt camera - Optional Smart TV support
 
 stbt_camera_build_target=$(if $(enable_stbt_camera), \
-	extra/camera/stbt-camera, \
+	extra/camera/stbt-camera \
+	extra/camera/gst/stbt-gst-plugins.so, \
 	$(info Not building optional plugins for Smart TV support))
 stbt_camera_install_target=$(if $(enable_stbt_camera), \
 	install-stbt-camera, \
@@ -276,7 +290,17 @@ stbt_camera_install_target=$(if $(enable_stbt_camera), \
 all : $(stbt_camera_build_target)
 install : $(stbt_camera_install_target)
 
-install-stbt-camera : extra/camera/stbt-camera
+CFLAGS?=-O2
+
+extra/camera/gst/stbt-gst-plugins.so : extra/camera/gst/plugin.c \
+                                       VERSION
+	@if ! pkg-config --exists $(PKG_DEPS); then \
+		printf "Please install packages $(PKG_DEPS)"; exit 1; fi
+	gcc -shared -o $@ $(filter %.c %.o,$^) -fPIC  -Wall -Werror $(CFLAGS) \
+		$(LDFLAGS) $$(pkg-config --libs --cflags $(PKG_DEPS)) \
+		-DVERSION=\"$(VERSION)\"
+
+install-stbt-camera : extra/camera/stbt-camera extra/camera/gst/stbt-gst-plugins.so
 	$(INSTALL) -m 0755 -d $(DESTDIR)$(libexecdir)/stbt && \
 	$(INSTALL) -m 0755 \
 		extra/camera/stbt-camera \
@@ -287,7 +311,10 @@ install-stbt-camera : extra/camera/stbt-camera
 		extra/camera/gst_utils.py \
 		extra/camera/tv_driver.py \
 		extra/camera/glyphs.svg.jinja2 \
-		$(DESTDIR)$(libexecdir)/stbt
+		$(DESTDIR)$(libexecdir)/stbt && \
+	$(INSTALL) -m 0755 -d $(DESTDIR)$(gstpluginsdir) && \
+	$(INSTALL) -m 0644 extra/camera/gst/stbt-gst-plugins.so \
+		$(DESTDIR)$(gstpluginsdir)
 
 .PHONY: all clean check dist doc install uninstall
 .PHONY: check-bashcompletion check-integrationtests check-nosetests check-pylint

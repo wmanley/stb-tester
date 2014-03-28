@@ -8,6 +8,7 @@ License: LGPL-2.1+
 Source: %{name}-@VERSION@.tar.gz
 BuildArch: noarch
 BuildRequires: python-docutils
+BuildRequires: gstreamer1-devel
 
 Requires: curl
 Requires: gstreamer1
@@ -46,7 +47,7 @@ useful for testing apps running on Smart TVs.
 make prefix=/usr sysconfdir=/etc
 
 %install
-make install prefix=/usr sysconfdir=/etc libexecdir=%{_libexecdir} DESTDIR=${RPM_BUILD_ROOT}
+make install prefix=/usr sysconfdir=/etc libexecdir=%{_libexecdir} gstpluginsdir=%{_libdir}/gstreamer-1.0 DESTDIR=${RPM_BUILD_ROOT}
 
 %files
 %defattr(-,root,root,-)
@@ -60,3 +61,4 @@ make install prefix=/usr sysconfdir=/etc libexecdir=%{_libexecdir} DESTDIR=${RPM
 
 %files camera
 %{_libexecdir}/stbt/stbt-camera
+%{_libdir}/gstreamer-1.0/stbt-gst-plugins.so
