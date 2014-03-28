@@ -68,6 +68,5 @@ Depends: stb-tester (>> ${source:Upstream-Version}),
          v4l-utils
 Recommends: python-matplotlib,
             python-scipy
-
 Description: Support for using a camera pointed at a TV as input for
  stb-tester.  This is useful for testing apps running on Smart TVs.
