@@ -702,7 +702,7 @@ def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD):
         subprocess.check_output([
             "tesseract", ocr_in.name, ocr_out.name[:-4], "-psm", str(mode)],
             stderr=subprocess.STDOUT)
-        text = ocr_out.read().strip()
+        text = ocr_out.read().decode('utf-8').strip()
         debug("OCR read '%s'." % text)
         return text
 
