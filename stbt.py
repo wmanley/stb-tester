@@ -672,7 +672,44 @@ class OcrMode(object):
     SINGLE_CHARACTER = 10
 
 
-def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD):
+def _tesseract(frame=None, region=None,
+               mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
+               extra_args=None):
+    if frame is None:
+        frame = get_frame()
+    if region is not None:
+        frame = frame[
+            region.y:region.y + region.height,
+            region.x:region.x + region.width]
+    if lang is None:
+        lang = 'eng'
+    if extra_args is None:
+        extra_args = []
+
+    # $XDG_RUNTIME_DIR is likely to be on tmpfs:
+    tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)
+
+    if hocr:
+        extra_args = ['hocr']
+    else:
+        extra_args = []
+
+    def mktmp(suffix):
+        return tempfile.NamedTemporaryFile(
+            prefix="stbt-ocr-", suffix=suffix, dir=tmpdir)
+
+    outsuffix = ".hocr" if hocr else ".txt"
+
+    with mktmp(suffix=".png") as ocr_in, mktmp(suffix=outsuffix) as ocr_out:
+        cv2.imwrite(ocr_in.name, frame)
+        cmd = ["tesseract", ocr_in.name, ocr_out.name[:-len(outsuffix)], "-psm",
+               str(mode)] + extra_args
+        subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        return ocr_out.read()
+
+
+def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
+        lang=None):
     """Return the text present in the video frame.
 
     Perform OCR (Optical Character Recognition) using the "Tesseract"
@@ -682,29 +719,40 @@ def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD):
     If `region` is specified, only process that region of the frame; otherwise
     process the entire frame.
     """
+    text = _tesseract(frame, region, mode, lang).decode('utf-8').strip()
+    debug("OCR read '%s'." % text)
+    return text
 
-    if frame is None:
-        frame = get_frame()
-    if region is not None:
-        frame = frame[
-            region.y:region.y + region.height,
-            region.x:region.x + region.width]
+def _hocr_to_text_list(hocr):
+    started = False
+    need_space = False
+    for elem in hocr.iterdescendants():
+        if elem.tag == '{http://www.w3.org/1999/xhtml}p' and started:
+            yield (u'\n', elem)
+            need_space = False
+        if elem.tag == '{http://www.w3.org/1999/xhtml}span' and \
+                'ocr_line' in elem.get('class').split() and started:
+            yield (u'\n', elem)
+            need_space = False
+        for e, t in [(elem, elem.text), (elem.getparent(), elem.tail)]:
+            if t:
+                if t.strip():
+                    if need_space and started:
+                        yield (u' ', None)
+                    need_space = False
+                    yield (unicode(t).strip(), e)
+                    started = True
+                else:
+                    need_space = True
 
-    # $XDG_RUNTIME_DIR is likely to be on tmpfs:
-    tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)
 
-    def mktmp(suffix):
-        return tempfile.NamedTemporaryFile(
-            prefix="stbt-ocr-", suffix=suffix, dir=tmpdir)
-
-    with mktmp(suffix=".png") as ocr_in, mktmp(suffix=".txt") as ocr_out:
-        cv2.imwrite(ocr_in.name, frame)
-        subprocess.check_output([
-            "tesseract", ocr_in.name, ocr_out.name[:-4], "-psm", str(mode)],
-            stderr=subprocess.STDOUT)
-        text = ocr_out.read().decode('utf-8').strip()
-        debug("OCR read '%s'." % text)
-        return text
+def match_text(text, frame=None, region=None,
+               mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None):
+    import lxml.etree
+    hocr = lxml.etree.fromstring(
+        _tesseract(frame, region, mode, lang, ['hocr']))
+    l = list(_hocr_to_text_list(hocr, text))
+    print l    
 
 
 def frames(timeout_secs=None):
