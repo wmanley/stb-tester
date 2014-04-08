@@ -269,7 +269,7 @@ class MatchResult(object):
 
     def __init__(
             self, timestamp, match, position, first_pass_result, frame=None,
-            image=None):
+            image=None, region=None):
         self.timestamp = timestamp
         self.match = match
         self.position = position
@@ -289,6 +289,7 @@ class MatchResult(object):
                 DeprecationWarning, stacklevel=2)
             image = ""
         self.image = image
+        self.region = region
 
     def __str__(self):
         return (
@@ -360,16 +361,18 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
             matched, position, first_pass_certainty = _match(
                 frame, template, match_parameters, template_name)
 
+            region = Region(position.x, position.y, template.shape[1],
+                            template.shape[0])
             result = MatchResult(
                 sample.get_buffer().pts, matched, position,
                 first_pass_certainty, numpy.copy(frame),
-                (image if isinstance(image, numpy.ndarray) else template_name))
+                (image if isinstance(image, numpy.ndarray) else template_name),
+                region)
 
             cv2.rectangle(
                 frame,
-                (position.x, position.y),
-                (position.x + template.shape[1],
-                 position.y + template.shape[0]),
+                (region.x, region.y),
+                (region.right, region.bottom),
                 (32, 0 if matched else 255, 255),  # bgr
                 thickness=3)
 
