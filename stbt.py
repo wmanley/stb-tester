@@ -246,7 +246,13 @@ class Region(namedtuple('Region', 'x y width height')):
     measured in pixels from the top left of the video frame. The `width` and
     `height` of the rectangle are also measured in pixels.
     """
-    pass
+    @property
+    def right(self):
+        return x + width
+
+    @property
+    def bottom(self):
+        return y + height
 
 
 class MatchResult(object):
