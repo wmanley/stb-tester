@@ -303,6 +303,8 @@ class MatchResult(object):
                     self.frame.shape[2]),
                 _template_name(self.image)))
 
+    def __nonzero__(self):
+        return self.match
 
 def detect_match(image, timeout_secs=10, noise_threshold=None,
                  match_parameters=None):
