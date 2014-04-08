@@ -16,6 +16,7 @@ import errno
 import functools
 import glob
 import inspect
+from itertools import count
 import os
 import Queue
 import re
@@ -768,13 +769,41 @@ def frames(timeout_secs=None):
     return _display.frames(timeout_secs)
 
 
-def save_frame(image, filename):
+def _create_unique(filename):
+    """Creates and opens a file for reading with a unique filename, returning
+    a file object.  The name of the file can be found using the returned file's
+    'name' attribute.  e.g. `_create_unique('filename.txt')` will create
+    `filename.txt` if it doesn't already exist otherwise `filename (1).txt`,
+    `filename (2).txt`, etc."""
+    fd = -1
+    template = filename.rsplit('.', 1)
+    for i in count():
+        if i == 0:
+            fn = filename
+        else:
+            fn = template[0] + ' (%i).' % i + \
+                 (template[1] if len(template) > 1 else '')
+        try:
+            return os.fdopen(os.open(fn, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o666), 'w')
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
+
+
+def save_frame(image, filename, overwrite=True):
     """Saves an OpenCV image to the specified file.
 
     Takes an image obtained from `get_frame` or from the `screenshot`
-    property of `MatchTimeout` or `MotionTimeout`.
+    property of `MatchTimeout` or `MotionTimeout`.  If `overwrite` is `False`
+    and `filename` already exists `save_frame` will use a different file name.
+    e.g. if `screenshot.png` exists `screenshot (1).png` will be used instead.
+
+    Returns the name of the file written.
     """
-    cv2.imwrite(filename, image)
+    _, pngdata = cv2.imencode('.png', image)
+    with open(filename, 'w') if overwrite else _create_unique(filename) as f:
+        f.write(pngdata)
+        return f.name
 
 
 def get_frame():

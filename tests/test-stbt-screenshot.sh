@@ -9,3 +9,9 @@ test_that_stbt_screenshot_obeys_filename_arg() {
     stbt screenshot "my screenshot.png" &&
     [ -f "my screenshot.png" ]
 }
+
+test_that_stbt_screenshot_doesnt_overwrite_file() {
+    stbt screenshot "screenshot.png" &&
+    stbt screenshot "screenshot.png" &&
+    [ -f "screenshot.png" ] && [ -f "screenshot (1).png" ]
+}

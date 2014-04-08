@@ -509,11 +509,15 @@ frames(timeout_secs=None)
     Returns an (image, timestamp) tuple for every frame captured, where
     "image" is in OpenCV format.
 
-save_frame(image, filename)
+save_frame(image, filename, overwrite=True)
     Saves an OpenCV image to the specified file.
 
     Takes an image obtained from `get_frame` or from the `screenshot`
-    property of `MatchTimeout` or `MotionTimeout`.
+    property of `MatchTimeout` or `MotionTimeout`.  If `overwrite` is `False`
+    and `filename` already exists `save_frame` will use a different file name.
+    e.g. if `screenshot.png` exists `screenshot (1).png` will be used instead.
+
+    Returns the name of the file written.
 
 get_frame()
     Returns an OpenCV image of the current video frame.
