@@ -975,6 +975,9 @@ class PreconditionError(UITestError):
             % (self.message, self.original_exception))
 
 
+def match(template, match_parameters=None):
+    return detect_match(template).next()
+
 # stbt-run initialisation and convenience functions
 # (you will need these if writing your own version of stbt-run)
 #===========================================================================
