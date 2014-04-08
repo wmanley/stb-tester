@@ -307,6 +307,21 @@ class MatchResult(object):
     def __nonzero__(self):
         return self.match
 
+
+def _load_template(template):
+    if isinstance(template, numpy.ndarray):
+        return template, _template_name(template)
+    else:
+        template_name = _find_path(template)
+        if not os.path.isfile(template_name):
+            raise UITestError("No such template file: %s" % image)
+        image = cv2.imread(template_name, cv2.CV_LOAD_IMAGE_COLOR)
+        if image is None:
+            raise UITestError("Failed to load template file: %s" %
+                              template_name)
+        return image, template_name
+
+
 def detect_match(image, timeout_secs=10, noise_threshold=None,
                  match_parameters=None):
     """Generator that yields a sequence of one `MatchResult` for each frame
@@ -342,17 +357,7 @@ def detect_match(image, timeout_secs=10, noise_threshold=None,
             DeprecationWarning, stacklevel=2)
         match_parameters.confirm_threshold = noise_threshold
 
-    if isinstance(image, numpy.ndarray):
-        template = image
-        template_name = _template_name(image)
-    else:
-        template_name = _find_path(image)
-        if not os.path.isfile(template_name):
-            raise UITestError("No such template file: %s" % image)
-        template = cv2.imread(template_name, cv2.CV_LOAD_IMAGE_COLOR)
-        if template is None:
-            raise UITestError("Failed to load template file: %s" %
-                              template_name)
+    template, template_name = _load_template(image)
 
     debug("Searching for " + template_name)
 
