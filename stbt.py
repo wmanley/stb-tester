@@ -706,20 +706,13 @@ def _tesseract(frame=None, region=None,
     # $XDG_RUNTIME_DIR is likely to be on tmpfs:
     tmpdir = os.environ.get("XDG_RUNTIME_DIR", None)
 
-    if hocr:
-        extra_args = ['hocr']
-    else:
-        extra_args = []
-
     def mktmp(suffix):
         return tempfile.NamedTemporaryFile(
             prefix="stbt-ocr-", suffix=suffix, dir=tmpdir)
 
-    outsuffix = ".hocr" if hocr else ".txt"
-
-    with mktmp(suffix=".png") as ocr_in, mktmp(suffix=outsuffix) as ocr_out:
+    with mktmp(suffix=".png") as ocr_in, mktmp(suffix='.txt') as ocr_out:
         cv2.imwrite(ocr_in.name, frame)
-        cmd = ["tesseract", ocr_in.name, ocr_out.name[:-len(outsuffix)], "-psm",
+        cmd = ["tesseract", ocr_in.name, ocr_out.name[:-len('.txt')], "-psm",
                str(mode)] + extra_args
         subprocess.check_output(cmd, stderr=subprocess.STDOUT)
         return ocr_out.read()
@@ -737,7 +730,7 @@ def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
     process the entire frame.
     """
     text = _tesseract(frame, region, mode, lang).decode('utf-8').strip()
-    debug("OCR read '%s'." % text)
+    debug(u"OCR read '%s'." % text)
     return text
 
 def _hocr_to_text_list(hocr):
