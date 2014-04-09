@@ -253,11 +253,11 @@ class Region(namedtuple('Region', 'x y width height')):
     """
     @property
     def right(self):
-        return x + width
+        return self.x + self.width
 
     @property
     def bottom(self):
-        return y + height
+        return self.y + self.height
 
 
 class MatchResult(object):
