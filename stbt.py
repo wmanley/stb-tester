@@ -37,6 +37,11 @@ import irnetbox
 from gst_hacks import map_gst_buffer, gst_iterate
 
 
+import codecs, sys
+
+reload(sys)
+sys.setdefaultencoding('utf-8')
+
 if getattr(gi, "version_info", (0, 0, 0)) < (3, 12, 0):
     GObject.threads_init()
 Gst.init(None)
@@ -853,7 +858,7 @@ def debug(msg):
     """Print the given string to stderr if stbt run `--verbose` was given."""
     if _debug_level > 0:
         sys.stderr.write(
-            "%s: %s\n" % (os.path.basename(sys.argv[0]), str(msg)))
+            u"%s: %s\n" % (os.path.basename(sys.argv[0]), str(msg)))
 
 
 @contextmanager
