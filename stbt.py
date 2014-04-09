@@ -314,7 +314,7 @@ def _load_template(template):
     else:
         template_name = _find_path(template)
         if not os.path.isfile(template_name):
-            raise UITestError("No such template file: %s" % image)
+            raise UITestError("No such template file: %s" % template)
         image = cv2.imread(template_name, cv2.CV_LOAD_IMAGE_COLOR)
         if image is None:
             raise UITestError("Failed to load template file: %s" %
