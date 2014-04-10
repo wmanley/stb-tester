@@ -1187,14 +1187,6 @@ class Display(object):
         debug("source pipeline: %s" % self.source_pipeline_description)
         debug("sink pipeline: %s" % sink_pipeline_description)
 
-        if (self.source_pipeline.set_state(Gst.State.PAUSED)
-                == Gst.StateChangeReturn.NO_PREROLL):
-            ddebug('This is a live source, dropping frames if we get behind')
-            self.source_pipeline.get_by_name('_stbt_raw_frames_queue') \
-                .set_property('leaky', 'downstream')
-            self.source_pipeline.get_by_name('appsink') \
-                .set_property('sync', False)
-
         self.source_pipeline.set_state(Gst.State.PLAYING)
         self.sink_pipeline.set_state(Gst.State.PLAYING)
 
@@ -1222,6 +1214,14 @@ class Display(object):
             self.start_timestamp = None
             source_queue.connect("underrun", self.on_underrun)
             source_queue.connect("running", self.on_running)
+
+        if (source_pipeline.set_state(Gst.State.PAUSED)
+                == Gst.StateChangeReturn.NO_PREROLL):
+            ddebug('This is a live source, dropping frames if we get behind')
+            source_pipeline.get_by_name('_stbt_raw_frames_queue') \
+                .set_property('leaky', 'downstream')
+            source_pipeline.get_by_name('appsink') \
+                .set_property('sync', False)
 
         self.source_pipeline = source_pipeline
 
