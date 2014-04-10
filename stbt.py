@@ -720,7 +720,7 @@ def _tesseract(frame=None, region=None,
 
     with mktmp(suffix=".png") as ocr_in, mktmp(suffix='.txt') as ocr_out:
         cv2.imwrite(ocr_in.name, subframe)
-        cmd = ["tesseract", ocr_in.name, ocr_out.name[:-len('.txt')], "-psm",
+        cmd = ["tesseract", '-l', lang, ocr_in.name, ocr_out.name[:-len('.txt')], "-psm",
                str(mode)] + extra_args
         subprocess.check_output(cmd, stderr=subprocess.STDOUT)
         return (ocr_out.read(), frame, region)
