@@ -699,8 +699,11 @@ def _tesseract(frame=None, region=None,
                extra_args=None):
     if frame is None:
         frame = get_frame()
-    if region is not None:
-        frame = frame[
+    if region is None:
+        subframe = frame
+        region = Region(0, 0, frame.shape[0], frame.shape[1])
+    else:
+        subframe = frame[
             region.y:region.y + region.height,
             region.x:region.x + region.width]
     if lang is None:
@@ -716,11 +719,11 @@ def _tesseract(frame=None, region=None,
             prefix="stbt-ocr-", suffix=suffix, dir=tmpdir)
 
     with mktmp(suffix=".png") as ocr_in, mktmp(suffix='.txt') as ocr_out:
-        cv2.imwrite(ocr_in.name, frame)
+        cv2.imwrite(ocr_in.name, subframe)
         cmd = ["tesseract", ocr_in.name, ocr_out.name[:-len('.txt')], "-psm",
                str(mode)] + extra_args
         subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        return ocr_out.read()
+        return (ocr_out.read(), frame, region)
 
 
 def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
@@ -734,8 +737,9 @@ def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
     If `region` is specified, only process that region of the frame; otherwise
     process the entire frame.
     """
-    text = _tesseract(frame, region, mode, lang).decode('utf-8').strip()
-    debug(u"OCR read '%s'." % text)
+    text, frame, region = _tesseract(frame, region, mode, lang)
+    text = text.decode('utf-8').strip()
+    debug(u"OCR in region %s read '%s'." % (region, text))
     return text
 
 def _hocr_to_text_list(hocr):
@@ -764,7 +768,7 @@ def _hocr_to_text_list(hocr):
 def match_text(text, frame=None, region=None,
                mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None):
     import lxml.etree
-    hocr = lxml.etree.fromstring(
+    hocr, frame, region = lxml.etree.fromstring(
         _tesseract(frame, region, mode, lang, ['hocr']))
     l = list(_hocr_to_text_list(hocr, text))
     print l    
