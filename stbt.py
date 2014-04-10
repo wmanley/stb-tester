@@ -1189,7 +1189,7 @@ class Display(object):
 
         if (self.source_pipeline.set_state(Gst.State.PAUSED)
                 == Gst.StateChangeReturn.NO_PREROLL):
-            # This is a live source, drop frames if we get behind
+            ddebug('This is a live source, dropping frames if we get behind')
             self.source_pipeline.get_by_name('_stbt_raw_frames_queue') \
                 .set_property('leaky', 'downstream')
             self.source_pipeline.get_by_name('appsink') \
