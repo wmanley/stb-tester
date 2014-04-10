@@ -16,7 +16,29 @@ import ImageFont
 
 from gi.repository import Pango
 
-example_text = u"""thanPhone:herline1|NofeelgoodWashingtoncontentuse31~#Ontheir`@FinanceStatesshippingâ€œ%Â£1.25m.Vocationalread6NowspecialThatMarchGeneralbetter#336699;font:DetailsLawdidyourâ€˜\endPriceRSanPeopleof<14801301A2EB0300NamedeWithprivatelinkJuneUnitedresultsubject(24littlesuchseeordersecond27Â§$0JulydetailsNhere.inaddresspmBooksrightsincludingâ‚¬/MWh<#UpCategoriesStateRating:Registerlookingpartnathanson*dashboardOnlyrightfrienddoeskeeplike21â€?andtake{65},IfedenmaphisPMdaylinksSerbicepagesÂ°|info@KidsRights.info}{currentHereNo.dueSignq&HealthshehoursmusicthinkpropertyCAor::wayAmericatotal40CVBy`tiedâ€™using2.but{<itemprofileClickoffManagement[yearsâ€˜hand-offsâ€™YellowdesigniGoDigitalJobWebmanyEntertainment[Â§providesWhatYorkVideoâ€œhands-off"19}$nameThisAD7575TQ/883Onlinecontrol2004ifButwhileProduct#he?"childrennon-discrimination."hi!@DabidNovrate15processArticleqQarticleanothercaseuponrelatedwouldHelpjustdifferentLk"i;HousemustbookbeenSerbicesINincludeâ€˜/wascalledmuchh(x)=4+xaccessmadeHometheseXQHigh12))'howfewPersonalInternationalreviewsStoresListingsupportFpoint100?Â¢LastItInformationwebsiteservices(3)UniversitySiteyearyou're20OnesameoutonlyOfUseron))))MidnightVfind50atPolicyalreadyGianluigi.ZanettinilifeHotelSome<B>DOÂ£[}K2000versiongot(Â§2.2.2)assignment[Ylargeit.followingÂ®Â©$:$Id:]\ZWhiteAfterTravelstateNetworkcompanyInternational~HavanaEquipmentthemPhotoOctoberVÃ©aeberyA11serbiceâ‚¬â€œThereSystemFrom:alsoAvvertisewhenPrintz6NationalhelpthreePagecouldInternetasNextCompanybecauseGamefoundTermsSupportEducation<r>JohneX!_X}z$Keqiao@BIZz!Box*aâ€˜jmillionUSdownÂ£[28ProductsCalifornia>Newsreserved.returnÂ©;Artsreportsoftwaresome{publicwhoâ‚¬+healthHotelsShe_\EventsEstatepersonDownload}$tooCityf&*kjKOurlessuser3]FORJoin<SportssmallupProjectSelectthenoldÂ®"Bedford,&nbspEnglandNEWoverNot+haveits29makingShoesToysÂ°|informationBuy26aboveReferencePostedbyTVinfobuyWorldInsuranceeachCarComputersnot\ZmostÂ©]2001pricenewsfocusÂ©1998-2004â€™=</please/&$+4Â°hasareamembersWhenbestFirstAprPresschangessureD`_iÂ¢~--carAsMainInMaynÂ¥96Â§DateANDnoLegalfiletherehongzhizaishang996,2006youjKknowstillHecallDirectorySecuritypolicyprogramlookSSP:Â£499.00(Â£586.33LoginlistItemsmembergo`_EimagecommentsDVDâ€˜â€™\@?MAKE:d:bX>developmentgreatrealstudentsforSystemsRealCompareÂ®Â©search))'becomeWestaddÂ¥~itweresite0without0.0worldhere16Totalcareotherqualityofleft3HistoryzÃ©roemailImageDesigndon'tMedical))Â§Â§27:308(B),basedonline(4,7,3,1,9,6,2,8,5);postCollegeZÃ©NewtwoDobusinessReportaccountlastTimeCouncilArt9underFREEInc.yetComputerputToGetAD,,EG,,HL,,MP,,QZfullXvalueBest[Satit'sUsemessagestudy_QtimeMicrosoftSpecialIsContact60Â°|nowmyCarelowÂ®?Shop(euroâ‚¬8.41)IncludingCustomerâ€œ%SchoolSaveoneq!It'sCanadaUSAstoreHsectionprovideReadlongâ€/â€*â€œfâ€found--aborting.\n"check))]Â©;rb_hash_shift(hash)Name:anynew#digitaldistractionsanti-inflationar%makeLibrary11ProgramnetworkÂ£Â¥8WELTMEISTERÂ®30Usâ€˜assimilationists,â€™AnEastveryfeedbackdateWAndâ‚¬â€œafterjobtoNumberSPleaseBTHEPCfebJResultswhereseveral3.Â¥1764(Â¥1680next>>WindowsPriceswithinsothingsGamesboth&#ReturnÂ§5]However,Search,Â£â€™sday{st,nd,rd,th},ZX+![XBrowseEmailpayalwaysmayq]))KornLocalRelatedResourcesTechnologyFullalltree\X$y"neverâ€/givenIndexSalesthroughTopvideoDescription-Wefree1999TitleOtherisAnuunciGayItalianiÂ®14termsÂ¢Â¥play[Xbox,aroundSeeshallfromTheseÂ¥2,500,000,000lifeFreefamily|<_Qhim13Price:musicmoresuitcase?...CanadianThephotos:ZYjZ`@be>Â£saidcannot"Â§iÂ¢~setNorthpeopleabledatamoneyJobshadhomeÂ£5K-10...+50Â°C,sincemight@â€˜+YourOBack1,@=i.donâ€˜t.understand.?days&hbar;:similarGuildford~,Oxford/zÃ©roSouth}{amCheckGardenMessagesomethingposted{>systemGreatperx-74.7367Â°,by:Visitan)Blogmeâ€œ%productRate[INTL:it]Howtao..hihi!!gosh..ngathatagainstbeforeour=anti-inflationar%8providedâ‚¬*doMarÂ¢%rYVzÃ©duringarticlesStockpersonalDepartment23PostÂ®Â©Â°Â°#!OrdercomputerFAQPrivacyâ‚¬â€œShippingresearchÂ©gameCJ.CopyrightwhatNovemberthose2005*&LyricsAccountFoodâ€™=eBaytype4RSSCommentsmaingetCurrentStreet\=PAboutshould));memberRe:ListReserved.(2)`{if...oa..oa..oa..:"){>â‚¬*Officemeansj;AprilMovies2003faith-buffy**places=0,1,2,...,t-1}thatArticlestheyworkingzÃ©|&Â¢Â¥Center5WeathercannumberOpeninitial_transition))havingAMAQueo!Store"Â§contactLearn17Business))]ReviewsAccessoriesworkstartPublic"Esioff-LÃ©onGuideprices~oqtopGroupYahoo!MJournalâ€™=resultswithInfoOFY?ScienceAugustpicturesneedAdvancedopenPages$14.00/19.50(Canada)OverallTheywhyAmerican1.Â®?2areshowschoolcreditused22MoreleastResearchto'+MostMapâ‚¬=changeÂ¢~&Sale``safety-significantSt.milesDayTools]`Â®Â©Â¥%highIFondation-SolidaritÃ©Mr.theLinkâ€˜Râ€™ownItemÂ°Â°which154-169|56-70|28-41FebruaryMy10h$@CountyAirâ€œanti-authoritarianâ€reallypageEnglishCartDatacomeaboutus25until|<timeshebackAddForLinksFindclickElectronicsthisViewBoardimportantProfileDate:.BlackYouRightsForumsgrouppoweritemssexrequiredJanuary%METATITLE%sayproductsavailablewaterdoxal-5Â¢-phosphate.Mediaâ€˜+JanBookPacific\Afghanistantext(1)TSendUK7Replysendformsincefirstintention-in-action;betweenPad,Standard,14X27EagoingQâ€.~#into~#5Â¢-TGTAACCTCTACTCCCAtransnationalizationSolovelocalI'mbeingTOweb"""
+example_text = u"""The quick brown fox jumped over the lazy dog.
+THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG.
+A Stitch In Time Saves Nine.
+My Telephone Number is +4470123456789
+My email address is example@example.com (but not really!)
+She said "Is Abdul's TV bright?" and I said: "Not really; I'm just trying to use
+punctuation.  This would be easy: with code, where I can use {curly brackets} and
+mathematical symbols like:
+
+7 + 3 = 10
+2 * 4 = 8
+12-3 = 9 and is 25% of 36.
+PEP8 says this_is_an_identifier.
+Hex looks like 0x45ABC642
+2^5 = 32 but costs £1.54 or $2.31
+
+In Python comments are like # you can use
+Refer to, paths, in your home directory with, ~/my/path.txt
+<img/> tags are useful in HTML but in shell | can be even better
+You can escape charactors with \ like \\n for newline.
+
+I like fish & chips.
+"""
 
 langdata = '/home/william-manley/Projects/tesseract-ocr/training/langdata'
 
@@ -63,7 +85,6 @@ def main(argv):
                           filename=os.path.abspath(font),
                           base='%s.%s.exp%i' % (args.lang, fid, args.exp),
                           flags=flags))
-        
 
     outfile = os.path.abspath("%s.traineddata" % args.lang)
 
