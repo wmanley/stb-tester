@@ -1203,24 +1203,28 @@ class Display(object):
         self.mainloop_thread.start()
 
     def create_source_pipeline(self):
-        self.source_pipeline = Gst.parse_launch(
+        assert self.source_pipeline is None
+        source_pipeline = Gst.parse_launch(
             self.source_pipeline_description)
-        source_bus = self.source_pipeline.get_bus()
+        source_bus = source_pipeline.get_bus()
         source_bus.connect("message::error", self.on_error)
         source_bus.connect("message::warning", self.on_warning)
         source_bus.connect("message::eos", self.on_eos_from_source_pipeline)
         source_bus.add_signal_watch()
-        appsink = self.source_pipeline.get_by_name("appsink")
+        appsink = source_pipeline.get_by_name("appsink")
         appsink.connect("new-sample", self.on_new_sample)
 
         if self.restart_source_enabled:
             # Handle loss of video (but without end-of-stream event) from the
             # Hauppauge HDPVR capture device.
-            source_queue = self.source_pipeline.get_by_name(
+            source_queue = source_pipeline.get_by_name(
                 "_stbt_user_data_queue")
             self.start_timestamp = None
             source_queue.connect("underrun", self.on_underrun)
             source_queue.connect("running", self.on_running)
+
+        self.source_pipeline = source_pipeline
+
 
     def get_sample(self, timeout_secs=10):
         try:
