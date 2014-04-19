@@ -16,29 +16,7 @@ import ImageFont
 
 from gi.repository import Pango
 
-example_text = u"""The quick brown fox jumped over the lazy dog.
-THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG.
-A Stitch In Time Saves Nine.
-My Telephone Number is +4470123456789
-My email address is example@example.com (but not really!)
-She said "Is Abdul's TV bright?" and I said: "Not really; I'm just trying to use
-punctuation.  This would be easy: with code, where I can use {curly brackets} and
-mathematical symbols like:
-
-7 + 3 = 10
-2 * 4 = 8
-12-3 = 9 and is 25% of 36.
-PEP8 says this_is_an_identifier.
-Hex looks like 0x45ABC642
-2^5 = 32 but costs £1.54 or $2.31
-
-In Python comments are like # you can use
-Refer to, paths, in your home directory with, ~/my/path.txt
-<img/> tags are useful in HTML but in shell | can be even better
-You can escape charactors with \ like \\n for newline.
-
-I like fish & chips.
-"""
+this_dir = os.path.dirname(os.path.abspath(__file__)) + '/'
 
 langdata = '/home/william-manley/Projects/tesseract-ocr/training/langdata'
 
@@ -61,6 +39,10 @@ def main(argv):
     parser.add_argument("--exp", default=0, help="Not sure yet...")
     parser.add_argument("--shape-clustering", action="store_true",
                         help="Enable this option for Indic languages")
+    parser.add_argument(
+        "--text", default=this_dir + 'example-text.txt',
+        help="File containing example text to train on")
+
     args = parser.parse_args(argv[1:])
 
     fonts = []
@@ -87,26 +69,24 @@ def main(argv):
                           flags=flags))
 
     outfile = os.path.abspath("%s.traineddata" % args.lang)
+    args.text = os.path.abspath(args.text)
 
     tmpdir = tempfile.mkdtemp()
     try:
         os.chdir(tmpdir)
         for font in fonts:
             # Generate box files
-            with NamedTemporaryFile() as text:
-                text.write(example_text.encode('utf-8'))
-                text.flush()
-                subprocess.check_call([
-                    'text2image',
-                    '--text=%s' % text.name,
-                    '--outputbase=%s' % font.base,
-                    '--font=%s' % font.name,
-                    '--fonts_dir=%s' % os.path.dirname(font.filename),
-                    '--degrade_image=false',
-                    '--xsize=1280',
-                    '--ysize=720',
-                    '--ptsize=6'
-                    ])
+            subprocess.check_call([
+                'text2image',
+                '--text=%s' % args.text,
+                '--outputbase=%s' % font.base,
+                '--font=%s' % font.name,
+                '--fonts_dir=%s' % os.path.dirname(font.filename),
+                '--degrade_image=false',
+                '--xsize=1280',
+                '--ysize=720',
+                '--ptsize=6'
+                ])
 
             subprocess.check_call([
                 'tesseract',

@@ -1,3 +1,4 @@
+# coding=utf-8
 """Main stb-tester python module. Intended to be used with `stbt run`.
 
 See `man stbt` and http://stb-tester.com for documentation.
@@ -13,6 +14,7 @@ import ConfigParser
 from contextlib import contextmanager
 import datetime
 import errno
+import string
 import functools
 import glob
 import inspect
@@ -693,6 +695,7 @@ class OcrMode(object):
     SINGLE_WORD_IN_A_CIRCLE = 9
     SINGLE_CHARACTER = 10
 
+ocr_transtab = dict(zip([ord(char) for char in u'“”‘’'], u'""\'\''))
 
 def _tesseract(frame=None, region=None,
                mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
@@ -718,12 +721,56 @@ def _tesseract(frame=None, region=None,
         return tempfile.NamedTemporaryFile(
             prefix="stbt-ocr-", suffix=suffix, dir=tmpdir)
 
+    l = lang.split('+')
+    if 'ocv-bilinear' in l:
+        outsize = (subframe.shape[1] * 3, subframe.shape[0] * 3)
+        subframe = cv2.resize(
+            subframe, outsize,
+            interpolation=cv2.INTER_LINEAR)
+    if 'ocv-bilinear2' in l:
+        outsize = (subframe.shape[1] * 2, subframe.shape[0] * 2)
+        subframe = cv2.resize(
+            subframe, outsize,
+            interpolation=cv2.INTER_LINEAR)
+    reallang = '+'.join([x for x in l if len(x) == 3])
+
     with mktmp(suffix=".png") as ocr_in, mktmp(suffix='.txt') as ocr_out:
         cv2.imwrite(ocr_in.name, subframe)
-        cmd = ["tesseract", '-l', lang, ocr_in.name, ocr_out.name[:-len('.txt')], "-psm",
+        scaling = ([x[len('scaled'):] for x in l if x.startswith('scaled')] or [None])[0]
+        if scaling is not None:
+            scaling_opt = scaling.split('-')
+            if scaling_opt[0] == '':
+                factor = 2
+            else:
+                factor = int(scaling_opt[0])
+            if len(scaling_opt) == 2:
+                algo = scaling_opt[1]
+            else:
+                algo = None
+
+            cmd = ['convert']
+            if algo == 'ddt':
+                cmd += ['-adaptive-resize']
+            else:
+                if algo:
+                    cmd += ['-filter', algo]
+                cmd += ['-resize']
+            cmd += ['%i00%%' % factor, ocr_in.name, ocr_in.name]
+            subprocess.check_output(cmd)
+        if 'sharpened' in l:
+            subprocess.check_output(['convert', '-sharpen', '0x1.0', ocr_in.name, ocr_in.name])
+        if 'noligatures' in l:
+            extra_args += ['-c', (u'tessedit_char_blacklist=%s' % u'ﬀﬁﬂﬃﬄﬅﬆ').encode('utf-8')]
+        cmd = ["tesseract", '-l', reallang, ocr_in.name, ocr_out.name[:-len('.txt')], "-psm",
                str(mode)] + extra_args
         subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        return (ocr_out.read(), frame, region)
+        text = ocr_out.read().decode('utf-8').strip()
+        if 'replaceligatures' in l:
+            for a, b in [(u'ﬀ', u'ff'), (u'ﬁ', u'fi'), (u'ﬂ', u'fl'), (u'ﬃ', u'ffi'), (u'ﬄ', u'ffl'), (u'ﬅ', u'ft'), (u'ﬆ', u'st')]:
+                text = text.replace(a, b)
+        if 'normedpunctuation' in l:
+            text = text.translate(ocr_transtab)
+        return (text, frame, region)
 
 
 def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
@@ -738,7 +785,7 @@ def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
     process the entire frame.
     """
     text, frame, region = _tesseract(frame, region, mode, lang)
-    text = text.decode('utf-8').strip()
+#    text = text.decode('utf-8').strip()
     debug(u"OCR in region %s read '%s'." % (region, text))
     return text
 

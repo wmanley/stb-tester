@@ -1,0 +1,27 @@
+The quick brown fox jumped over the lazy dog.
+THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG.
+A Stitch In Time Saves Nine.
+My Telephone Number is +4470123456789
+My email address is example@example.com (but not really!)
+She said "Is Abdul's TV bright?" and I said: "Not really; I'm just trying to use
+punctuation.  This would be easy: with code, where I can use {curly brackets} and
+mathematical symbols like:
+
+7 + 3 = 10
+2 * 4 = 8
+12-3 = 9 and is 25% of 36.
+PEP8 says this_is_an_identifier.
+Hex looks like 0x45ABC642
+2^5 = 32 but costs £1.54 or $2.31
+
+In Python comments are like # you can use
+Refer to, paths, in your home directory with, ~/my/path.txt
+<img/> tags are useful in HTML but in shell | can be even better
+You can escape characters with \ like \\n for newline.
+
+I like fish & chips.
+
+Some choice quotes:
+
+“quoted” text is “great”
+“Even” with differenʼt apostrophies.  She said ʻapost’ he said ʻcatastrophe’
