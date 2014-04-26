@@ -789,7 +789,7 @@ def _NamedTemporaryDirectory(
 
 
 def _tesseract(frame, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
-               lang=None):
+               lang=None, config_file=None):
     if lang is None:
         lang = 'eng'
 
@@ -824,6 +824,8 @@ def _tesseract(frame, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
         cv2.imwrite(ocr_in.name, subframe)
         cmd = ["tesseract", '-l', lang, ocr_in.name,
                outdir + '/output', "-psm", str(mode)]
+        if config_file is not None:
+            cmd += [config_file]
         subprocess.check_output(cmd, stderr=subprocess.STDOUT)
         with open(outdir + '/' + os.listdir(outdir)[0], 'r') as outfile:
             return (outfile.read(), region)
@@ -856,6 +858,116 @@ def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
     text = text.decode('utf-8').strip().translate(_ocr_transtab)
     debug(u"OCR in region %s read '%s'." % (region, text))
     return text
+
+
+def _hocr_iterate(hocr):
+    started = False
+    need_space = False
+    for elem in hocr.iterdescendants():
+        if elem.tag == '{http://www.w3.org/1999/xhtml}p' and started:
+            yield (u'\n', elem)
+            need_space = False
+        if elem.tag == '{http://www.w3.org/1999/xhtml}span' and \
+                'ocr_line' in elem.get('class').split() and started:
+            yield (u'\n', elem)
+            need_space = False
+        for e, t in [(elem, elem.text), (elem.getparent(), elem.tail)]:
+            if t:
+                if t.strip():
+                    if need_space and started:
+                        yield (u' ', None)
+                    need_space = False
+                    yield (unicode(t).strip(), e)
+                    started = True
+                else:
+                    need_space = True
+
+
+def _hocr_find_phrase(hocr, phrase):
+    l = list(_hocr_iterate(hocr))
+    words_only = [(w, elem) for w, elem in l if w.strip() != u'']
+
+    # Dumb and poor algorithmic complexity but succint and simple
+    if len(phrase) <= len(words_only):
+        for x in range(0, len(words_only)):
+            sublist = words_only[x:x + len(phrase)]
+            if all(w[0].lower() == p.lower() for w, p in zip(sublist, phrase)):
+                return sublist
+    return None
+
+
+def _hocr_elem_region(elem):
+    while elem is not None:
+        m = re.search(r'bbox (\d+) (\d+) (\d+) (\d+)', elem.get('title') or u'')
+        if m:
+            extents = [int(x) for x in m.groups()]
+            return Region.from_extents(*extents)
+        elem = elem.getparent()
+
+
+class TextMatchResult(namedtuple(
+        "TextMatchResult", "timestamp match frame text region")):
+    """Return type of `match_text`.
+
+    timestamp: Timestamp of the frame matched against
+    match (bool): Whether the text was found or not
+    frame: The video frame matched against
+    text (unicode): The text searched for
+    region (Region): The bounding box of the text found or None if no text found
+    """
+    # pylint: disable=E1101
+    def __nonzero__(self):
+        return self.match
+
+
+def match_text(text, frame=None, region=None,
+               mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None):
+    """Search the screen for the given text.
+
+    Can be used as an alternative to `wait_for_match`, etc. searching for text
+    instead of an image.
+
+    Args:
+        text (unicode): Text to search for.
+
+    Kwargs:
+        Refer to the arguments to `ocr()`.
+
+    Returns:
+        TextMatchResult.  Will evaluate to True if text matched, false
+        otherwise.
+
+    Example:
+
+    Select a button in a vertical menu by name.  In this case "TV Guide".
+
+        m = stbt.match_text(u"TV Guide", match('button-background.png').region)
+        assert m.match
+        while not stbt.match('selected-button.png').region.contains(m.region):
+            press('KEY_DOWN')
+    """
+    import lxml.etree
+    if frame is None:
+        frame = get_frame()
+
+    ts = _get_frame_timestamp(frame)
+
+    xml, region = _tesseract(frame, region, mode, lang, config_file='hocr')
+    hocr = lxml.etree.fromstring(xml)
+    p = _hocr_find_phrase(hocr, text.split())
+    if p:
+        # Find bounding box
+        box = None
+        for _, elem in p:
+            box = _bounding_box(box, _hocr_elem_region(elem))
+        # _tesseract crops to region and scales up by a factor of 3 so we must
+        # undo this transformation here.
+        box = Region.from_extents(
+            region.x + box.x // 3, region.y + box.y // 3,
+            region.x + box.right // 3, region.y + box.bottom // 3)
+        return TextMatchResult(ts, True, frame, text, box)
+    else:
+        return TextMatchResult(ts, False, frame, text, None)
 
 
 def frames(timeout_secs=None):
@@ -1266,6 +1378,13 @@ def _test_that_dimensions_of_array_are_according_to_caps():
         None, None)
     with _numpy_from_sample(s, readonly=True) as a:
         assert a.shape == (3, 4, 3)
+
+
+def _get_frame_timestamp(frame):
+    if isinstance(frame, Gst.Sample):
+        return frame.get_buffer().pts
+    else:
+        return None
 
 
 class Display(object):

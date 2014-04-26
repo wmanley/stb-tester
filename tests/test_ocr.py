@@ -44,3 +44,49 @@ def test_that_ligatures_and_ambiguous_punctuation_are_normalised():
     text = stbt.ocr(frame=cv2.imread('tests/ocr/ambig.png'))
     text = text.replace("horizonta|", "horizontal")  # for tesseract < 3.03
     eq_(ligature_text, text)
+
+# Menu as listed in menu.svg:
+menu = [
+    [
+        u"Onion Bhaji",
+        u"Mozzarella Pasta\nBake",
+        u"Lamb and Date\nCasserole",
+        u"Jerk Chicken"
+    ], [
+        u"Beef Wellington",
+        u"Kerala Prawn Curry",
+        u"Chocolate Fudge Cake",
+        u"Halloumi Stuffed\nPeppers"
+    ]
+]
+
+
+def iterate_menu():
+    for x in range(4):
+        for y in range(2):
+            text = menu[y][x]
+            yield (
+                text,
+                stbt.Region((1 + 8 * x) * 40, (3 + 7 * y) * 40, 6 * 40, 2 * 40),
+                '\n' in text)
+
+
+def test_that_text_location_is_recognised():
+    frame = cv2.imread("tests/ocr/menu.png")
+
+    def test(text, region):
+        result = stbt.match_text(text, frame=frame)
+        assert result
+        assert region.contains(result.region)  # pylint: disable=E1101
+
+    for text, region, multiline in iterate_menu():
+        # Don't currently support multi-line comments
+        if multiline:
+            continue
+
+        yield (test, text, region)
+
+
+def test_that_match_text_returns_no_match_for_non_matching_text():
+    frame = cv2.imread("tests/ocr/menu.png")
+    assert not stbt.match_text(u"Noodle Soup", frame=frame)

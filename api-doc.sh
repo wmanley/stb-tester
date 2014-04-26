@@ -72,6 +72,7 @@ python_docstrings() {
     doc wait_for_motion
     doc detect_match
     doc detect_motion
+    doc match_text
     doc ocr
     doc OcrMode
     doc as_precondition
@@ -91,6 +92,7 @@ python_docstrings() {
     doc MotionTimeout
     doc NoVideo
     doc PreconditionError
+    doc TextMatchResult
     doc UITestFailure
     doc UITestError
 }

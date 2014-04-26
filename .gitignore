@@ -13,5 +13,6 @@ TAGS
 VERSION
 extra/vm/.vagrant
 tests/test-install
+tests/ocr/menu.png
 nosetest-issue-49-workaround-stbt-control.py
 extra/stb-tester.spec

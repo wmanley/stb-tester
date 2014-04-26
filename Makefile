@@ -114,7 +114,7 @@ clean:
 	rm -f stbt.1 stbt defaults.conf .stbt-prefix
 
 check: check-nosetests check-integrationtests check-pylint check-bashcompletion
-check-nosetests:
+check-nosetests: tests/ocr/menu.png
 	# Workaround for https://github.com/nose-devs/nose/issues/49:
 	cp stbt-control nosetest-issue-49-workaround-stbt-control.py && \
 	nosetests --with-doctest -v \
@@ -167,6 +167,8 @@ parallel := $(shell \
     parallel --version 2>/dev/null | grep -q GNU && \
     echo parallel --gnu || echo xargs)
 
+tests/ocr/menu.png : %.png : %.svg
+	rsvg-convert $< >$@
 
 # Can only be run from within a git clone of stb-tester or VERSION (and the
 # list of files) won't be set correctly.
