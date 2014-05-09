@@ -90,3 +90,14 @@ def test_that_text_location_is_recognised():
 def test_that_match_text_returns_no_match_for_non_matching_text():
     frame = cv2.imread("tests/ocr/menu.png")
     assert not stbt.match_text(u"Noodle Soup", frame=frame)
+
+
+def test_that_passing_patterns_doesnt_crash():
+    print stbt.ocr(frame=cv2.imread('tests/ocr/misspelt.png'))
+    print
+    print stbt.ocr(frame=cv2.imread('tests/ocr/misspelt.png'),
+                   patterns=[u'PLACEBO', u'MASSIVE'])
+    print
+    print stbt.ocr(frame=cv2.imread('tests/ocr/misspelt.png'),
+                   patterns=[u'PLACEB0', u'MA55IVE'])
+    assert False

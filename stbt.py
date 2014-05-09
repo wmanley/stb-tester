@@ -788,8 +788,30 @@ def _NamedTemporaryDirectory(
         rmtree(dirname)
 
 
+def _tesseract_patterns_to_config(patterns):
+    user_words = []
+    user_patterns = []
+    for p in patterns:
+        if '\\' in patterns:
+            user_patterns.append(p)
+        else:
+            user_words.append(p)
+    return (u'\n'.join(user_words).encode('utf-8'),
+            u'\n'.join(user_patterns).encode('utf-8'))
+
+
+def _find_tessdata_dir():
+    from distutils.spawn import find_executable
+    tess_prefix_share = os.path.normpath(
+        find_executable('tesseract') + '/../../share/')
+    for suffix in ['/tessdata', '/tesseract-ocr/tessdata']:
+        if os.path.exists(tess_prefix_share + suffix):
+            return tess_prefix_share + suffix
+    raise RuntimeError('Installation error: Cannot locate tessdata directory')
+
+
 def _tesseract(frame, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
-               lang=None, config_file=None):
+               lang=None, config_file=None, patterns=None):
     if lang is None:
         lang = 'eng'
 
@@ -820,19 +842,43 @@ def _tesseract(frame, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
     # could be written to "hello.html" or "hello.hocr".  We work around this
     # with a temporary directory:
     with mktmp(suffix=".png") as ocr_in, \
-            _NamedTemporaryDirectory(prefix='stbt-ocr-', dir=tmpdir) as outdir:
-        cv2.imwrite(ocr_in.name, subframe)
+            _NamedTemporaryDirectory( \
+                prefix='stbt-ocr-', dir=tmpdir) as tmpdir:
+        outdir = tmpdir + '/output'
+        os.mkdir(outdir)
+
         cmd = ["tesseract", '-l', lang, ocr_in.name,
                outdir + '/output', "-psm", str(mode)]
+
+        if patterns is None:
+            tessenv = None
+        else:
+            tessdata_dir = tmpdir + '/tessdata'
+            os.mkdir(tessdata_dir)
+
+            # Requires GNU cp with -s to create symlinks
+            subprocess.check_call(
+                ['cp', '-rs', _find_tessdata_dir(), tmpdir])
+
+            tessenv = os.environ.copy()
+            tessenv['TESSDATA_PREFIX'] = tmpdir
+
+            user_words, user_patterns = _tesseract_patterns_to_config(patterns)
+            print repr((user_words, user_patterns))
+            with open(tessdata_dir + '/eng.user-words', 'w') as f:
+                f.write(user_words)
+            with open(tessdata_dir + '/eng.user-patterns', 'w') as f:
+                f.write(user_patterns)
+        cv2.imwrite(ocr_in.name, subframe)
         if config_file is not None:
             cmd += [config_file]
-        subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        subprocess.check_output(cmd, stderr=subprocess.STDOUT, env=tessenv)
         with open(outdir + '/' + os.listdir(outdir)[0], 'r') as outfile:
             return (outfile.read(), region)
 
 
 def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
-        lang=None):
+        lang=None, patterns=None):
     """Return the text present in the video frame as a Unicode string.
 
     Perform OCR (Optical Character Recognition) using the "Tesseract"
@@ -854,7 +900,7 @@ def ocr(frame=None, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
     if frame is None:
         frame = _display.get_sample()
 
-    text, region = _tesseract(frame, region, mode, lang)
+    text, region = _tesseract(frame, region, mode, lang, None, patterns)
     text = text.decode('utf-8').strip().translate(_ocr_transtab)
     debug(u"OCR in region %s read '%s'." % (region, text))
     return text
