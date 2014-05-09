@@ -869,10 +869,28 @@ def _tesseract(frame, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
                 f.write(user_words)
             with open(tessdata_dir + '/eng.user-patterns', 'w') as f:
                 f.write(user_patterns)
+            cmd += ['--tessdata-dir', tmpdir]
+
+        cmd += ['-c', 'user_words_suffix=user-words',
+                '-c', 'user_patterns_suffix=user-patterns',
+                '-c', 'load_system_dawg=F',
+                '-c', 'load_freq_dawg=F',
+                '-c', 'language_model_penalty_non_freq_dict_word=0.1',
+                '-c', 'language_model_penalty_non_dict_word=0.15',
+                '-c', 'language_model_debug_level=0',
+                ]
+
+
         cv2.imwrite(ocr_in.name, subframe)
         if config_file is not None:
             cmd += [config_file]
-        subprocess.check_output(cmd, stderr=subprocess.STDOUT, env=tessenv)
+
+        try:
+            print subprocess.check_output(cmd, stderr=subprocess.STDOUT, env=tessenv)
+        except subprocess.CalledProcessError as e:
+            print e.output
+            raise
+#        subprocess.check_call(['ls', '-l', tmpdir + '/tessdata'], env=tessenv)
         with open(outdir + '/' + os.listdir(outdir)[0], 'r') as outfile:
             return (outfile.read(), region)
 

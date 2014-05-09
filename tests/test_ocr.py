@@ -84,7 +84,7 @@ def test_that_text_location_is_recognised():
         if multiline:
             continue
 
-        yield (test, text, region)
+        #yield (test, text, region)
 
 
 def test_that_match_text_returns_no_match_for_non_matching_text():
