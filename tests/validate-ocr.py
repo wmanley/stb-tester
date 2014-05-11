@@ -1,0 +1,95 @@
+#!/usr/bin/python
+
+import sys
+import argparse
+import os
+import yaml
+import cv2
+import jinja2
+
+
+def test(imgname, phrases, params):
+    from stbt import ocr
+
+    img = cv2.imread(imgname)
+    text = ocr(img, **params)
+
+    matches = sum(1 for x in phrases if x in text)
+
+    return {
+        "matches": matches,
+        "total": len(phrases),
+        "percentage": float(matches) / len(phrases) * 100,
+        "name": os.path.basename(imgname),
+        "path": imgname,
+        "phrases": [{"text": x, "match": x in text} for x in phrases],
+        "text": text,
+    }
+
+
+def main(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--report-filename",
+                        help="Filename to write the HTML report to")
+    parser.add_argument("corpus", help="Directory containing test corpus",
+                        default='.')
+
+    args = parser.parse_args(argv[1:])
+
+    results = []
+
+    files = []
+    for root, dirs, dfiles in os.walk(args.corpus):
+        files += [root + '/' + f for f in dfiles if f.endswith('.txt')]
+
+    for n, f in zip(range(len(files)), files):
+        sys.stderr.write("%i / %i Complete\r" % (n, len(files)))
+
+        imgname = f[:-len('.txt')]
+        with open(f) as of:
+            text = of.read()
+
+        sections = text.split('---', 1)
+        if len(sections) == 2:
+            params = yaml.safe_load(sections[0])
+        else:
+            params = {}
+
+        phrases = [x.decode('utf-8') for x in sections[-1].split('\n')
+                   if x.strip() != '']
+        results.append(test(imgname, phrases, params))
+
+    sys.stderr.write('\n')
+
+    total = sum(x['total'] for x in results)
+    total_matched = sum(x['matches'] for x in results)
+
+    if args.report_filename:
+        template = os.path.dirname(__file__) + '/validate-ocr.html.jinja'
+        with open(args.report_filename, 'w') as f:
+            f.write(jinja2.Template(open(template).read()).render(
+                images=results,
+                total=total,
+                total_matched=total_matched,
+                percentage=float(total_matched)/total*100).encode('utf-8'))
+
+    sys.stdout.write("Passes:\n")
+    for x in results:
+        if x['matches'] > 0:
+            sys.stdout.write("    " + x['name'] + '\n')
+        for y in x['phrases']:
+            if y['match']:
+                sys.stdout.write('        ' + y['text'].encode('utf-8') + '\n')
+
+    sys.stdout.write("Failures:\n")
+    for x in results:
+        if x['matches'] < x['total']:
+            sys.stdout.write("    " + x['name'] + '\n')
+        for y in x['phrases']:
+            if not y['match']:
+                sys.stdout.write('        ' + y['text'].encode('utf-8') + '\n')
+    return 0 if total == total_matched else 1
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))
