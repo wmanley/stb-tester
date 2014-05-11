@@ -821,6 +821,12 @@ def _tesseract(frame, region=None, mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
 
         subframe = f[region.y:region.bottom, region.x:region.right]
 
+        # Here we attempt to highlight text by feeding the difference between
+        # the text and the background to tesseract
+        blur_radius = 29
+        bg = cv2.medianBlur(subframe, blur_radius)
+        subframe = cv2.cvtColor(cv2.absdiff(subframe, bg), cv2.COLOR_BGR2GRAY)
+
         # We scale image up 3x before feeding it to tesseract as this
         # significantly reduces the error rate by more than 6x in tests.  This
         # uses bilinear interpolation which produces the best results.  See
