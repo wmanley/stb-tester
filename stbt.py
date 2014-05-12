@@ -792,7 +792,7 @@ def _tesseract_patterns_to_config(patterns):
     user_words = []
     user_patterns = []
     for p in patterns:
-        if '\\' in patterns:
+        if '\\' in p:
             user_patterns.append(p)
         else:
             user_words.append(p)
