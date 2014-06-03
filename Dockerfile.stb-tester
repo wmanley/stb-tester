@@ -1,0 +1,39 @@
+# Container to be used as a base image with stb-tester installed
+
+FROM ubuntu:14.04
+MAINTAINER will@stb-tester.com
+
+RUN adduser --home /var/lib/stbt --uid 1000 --disabled-password --gecos "" \
+        stb-tester && \
+    echo "stb-tester    ALL=(ALL:ALL) NOPASSWD:ALL" >/etc/sudoers.d/stb-tester
+
+USER stb-tester
+WORKDIR /var/lib/stbt
+ENV HOME /var/lib/stbt
+
+ADD extra/debian/control /tmp/runtime-deps
+RUN export DEBIAN_FRONTEND=noninteractive && \
+    sudo apt-get update && \
+    sudo apt-get dist-upgrade -y && \
+    sudo apt-get install -y $(awk '/^         [^$ ]/ {print $1}' /tmp/runtime-deps | sed 's/,//g') && \
+    sudo apt-get clean && \
+    sudo rm /tmp/runtime-deps
+
+# Build deps
+RUN export DEBIAN_FRONTEND=noninteractive && \
+    sudo apt-get update && \
+    sudo apt-get install -y git make python-docutils && \
+    sudo apt-get clean
+
+# Install
+ADD . /usr/src/stb-tester
+RUN cp -R /usr/src/stb-tester . && \
+    make -C stb-tester prefix=/usr sysconfdir=/etc libexecdir=/usr/lib && \
+    sudo make -C stb-tester prefix=/usr sysconfdir=/etc libexecdir=/usr/lib install && \
+    rm -rf stb-tester
+
+# Remove build-deps
+RUN sudo apt-get remove -y --purge git make python-docutils && \
+    sudo apt-get -y --purge autoremove && \
+    sudo apt-get clean && \
+    sudo rm -Rf /usr/src/stb-tester
