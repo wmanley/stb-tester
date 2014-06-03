@@ -390,7 +390,17 @@ install-stbt-camera : $(stbt_camera_files)
 	$(INSTALL) -m 0644 stbt-camera.d/gst/stbt-gst-plugins.so \
 		$(DESTDIR)$(gstpluginsdir)
 
-.PHONY: all clean check deb dist doc install install-core install-stbt-camera uninstall
+# Docker images
+
+docker-build : stb-tester-$(VERSION).tar.gz
+	tmpdir=$$(mktemp -d) && \
+	tar -C "$$tmpdir" -xzf $(abspath $<) && \
+	find "$$tmpdir/stb-tester-$(VERSION)" -print0 | xargs -0 touch -cht 197001010000.00 && \
+	docker.io build --rm=false -t stb-tester:$(VERSION) "$$tmpdir/stb-tester-$(VERSION)" && \
+	rm -rf "$$tmpdir" && \
+	printf "Run with:\n    docker.io run stb-tester:$(VERSION)\n"
+
+.PHONY: all clean check deb dist doc docker-build install install-core install-stbt-camera uninstall
 .PHONY: check-bashcompletion check-hardware check-integrationtests
 .PHONY: check-nosetests check-pylint install-for-test
 .PHONY: copr-publish ppa-publish srpm
