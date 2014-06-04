@@ -44,6 +44,7 @@ tools += stbt-power
 tools += stbt-screenshot
 tools += stbt-templatematch
 tools += stbt-tv
+tools += stbt-virtual-stb
 
 # Generate version from 'git describe' when in git repository, and from
 # VERSION file included in the dist tarball otherwise.
@@ -75,6 +76,7 @@ install-core : stbt.sh stbt.1
 	    $(DESTDIR)$(bindir) \
 	    $(DESTDIR)$(libexecdir)/stbt \
 	    $(DESTDIR)$(libexecdir)/stbt/_stbt \
+	    $(DESTDIR)$(libexecdir)/stbt/extra/virtual-stb \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d/static \
@@ -112,6 +114,9 @@ install-core : stbt.sh stbt.1
 	    stbt-batch.d/templates/index.html \
 	    stbt-batch.d/templates/testrun.html \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d/templates
+	$(INSTALL) -m 0644 extra/virtual-stb/virtual-stb.py \
+	    extra/virtual-stb/xorg.conf.jinja2 \
+	    $(DESTDIR)$(libexecdir)/stbt/extra/virtual-stb
 	$(INSTALL) -m 0644 stbt.1 $(DESTDIR)$(man1dir)
 	$(INSTALL) -m 0644 desktop.conf $(DESTDIR)$(sysconfdir)/stbt/stbt.conf
 	$(INSTALL) -m 0644 stbt-completion \
