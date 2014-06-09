@@ -2246,6 +2246,10 @@ def _log_image_descriptions(
         </head>
         <body>
         <div class="container">
+        {% if prev_page %}
+          <a href="{{ prev_page }}">prev</a>
+        {% endif %}
+        <a href="{{ next_page }}">next</a>
         <h4>
             <i>{{template_name}}</i>
             {{"matched" if matched else "didn't match"}}
@@ -2338,6 +2342,9 @@ def _log_image_descriptions(
             min=min,
             position=position,
             template_name=template_name,
+            prev_page=(_frame_number > 0 and
+                       "../%05d/index.html" % (_frame_number - 1)),
+            next_page="../%05d/index.html" % (_frame_number + 1)
         ))
 
 
