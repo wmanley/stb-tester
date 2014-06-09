@@ -98,7 +98,7 @@
             — <span>{{ run.failure_reason | truncate(30, True) }}</span>
           {% endif %}
         </td>
-        <td>{{ run.notes | truncate(30, True) }}</td>
+        <td>{{ run.notes | striptags | truncate(30, True) }}</td>
         <td>{{run.duration}}</td>
         {% for column in extra_columns %}
           <td style="white-space: pre">{{
