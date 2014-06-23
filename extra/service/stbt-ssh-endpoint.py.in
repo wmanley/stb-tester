@@ -1,0 +1,44 @@
+#!/usr/bin/python
+
+import os
+import shlex
+import sys
+
+cmdsdir = "@LIBEXECDIR@/stbt/extra/service/commands/"
+
+
+def usage():
+    sys.stderr.write('Usage:\n')
+    for cmd in os.listdir(cmdsdir):
+        if os.stat(cmdsdir + cmd).st_mode & 0007:
+            sys.stderr.write('    %s\n' % cmd)
+
+
+def main():
+    if 'SSH_ORIGINAL_COMMAND' in os.environ:
+        orig_cmd = shlex.split(os.environ['SSH_ORIGINAL_COMMAND'])
+        cmd = orig_cmd[1:]
+
+        if orig_cmd[0] != 'stbt-ssh-endpoint':
+            sys.stderr.write(
+                'SSH access is restricted.  Command must be '
+                'stbt-ssh-endpoint\n')
+            usage()
+            return 1
+    else:
+        cmd = sys.argv[1:]
+
+    if len(cmd) >= 1 and os.path.exists(cmdsdir + cmd[0]):
+        os.environ['PYTHONPATH'] = "%s/../../..:%s" % \
+            (cmdsdir, os.environ.get('PYTHONPATH', ''))
+        if 'XDG_RUNTIME_DIR' not in os.environ:
+            os.environ['XDG_RUNTIME_DIR'] = os.environ['HOME'] + '/.run'
+        os.execv('/usr/bin/ssh-agent',
+                 ['ssh-agent', cmdsdir + cmd[0]] + cmd[1:])
+    else:
+        sys.stderr.write('Error: Command %s not found\n\n' % " ".join(cmd))
+        usage()
+        return 1
+
+if __name__ == '__main__':
+    sys.exit(main())

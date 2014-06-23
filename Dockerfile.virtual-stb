@@ -1,0 +1,43 @@
+# Base image for Containers that will run your "virtual stb" application
+# (an X11 application that you want to test with stb-tester).
+
+FROM ubuntu:14.04
+MAINTAINER will@stb-tester.com
+
+RUN export DEBIAN_FRONTEND=noninteractive && \
+    sudo apt-get update && \
+    sudo apt-get install -y \
+        python \
+        python-enum \
+        python-jinja2 \
+        ratpoison \
+        xdotool \
+        xserver-xorg-video-dummy && \
+    sudo apt-get clean
+
+RUN adduser --home /var/lib/stbt --uid 1000 --disabled-password --gecos "" \
+        stb-tester && \
+    echo "stb-tester    ALL=(ALL:ALL) NOPASSWD:ALL" >/etc/sudoers.d/stb-tester
+
+USER stb-tester
+ENV HOME /var/lib/stbt
+WORKDIR /var/lib/stbt
+
+ADD _stbt/__init__.py /usr/lib/stbt/_stbt/__init__.py
+ADD _stbt/notify.py /usr/lib/stbt/_stbt/notify.py
+ADD _stbt/utils.py /usr/lib/stbt/_stbt/utils.py
+ADD extra/virtual-stb/key-mapping.conf /usr/lib/stbt/extra/virtual-stb/
+ADD extra/virtual-stb/virtual-stb-impl.py /usr/lib/stbt/extra/virtual-stb/
+ADD extra/virtual-stb/xorg.conf.jinja2 /usr/lib/stbt/extra/virtual-stb/
+
+RUN sudo mkdir -p /tmp/.X11-unix /run/lirc && \
+    sudo chmod a+rwx /tmp/.X11-unix /run/lirc
+
+VOLUME /tmp/.X11-unix
+EXPOSE 8765
+
+ENV PYTHONPATH /usr/lib/stbt/
+
+ENTRYPOINT ["/usr/bin/python", \
+            "/usr/lib/stbt/extra/virtual-stb/virtual-stb-impl.py", \
+            "--in-container", "--with-lirc"]

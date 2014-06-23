@@ -1,0 +1,194 @@
+#!/usr/bin/python
+
+import argparse
+import os
+import shlex
+import shutil
+import signal
+import sys
+from contextlib import contextmanager
+from glob import glob
+from subprocess import CalledProcessError, check_call, check_output, STDOUT
+
+from _stbt.docker import container_to_host_path
+from _stbt.utils import mkdir_p, named_temporary_directory
+from _stbt.virtual_stb import virtual_stb
+
+
+@contextmanager
+def repo(url, revision):
+    keys = glob('/etc/stbt/auth/keys/*id_rsa')
+    if keys:
+        check_call(['ssh-add'] + keys)
+    mkdir_p("test-packs")
+    with named_temporary_directory(dir="test-packs/") as tmpdir:
+        test_pack = tmpdir + "/test-pack"
+
+        def git(args):
+            return check_output(['git', '-C', test_pack] + args)
+
+        mkdir_p(tmpdir + '/config/git')
+        os.environ['XDG_CONFIG_HOME'] = os.environ['HOME'] + '/config'
+        check_call(['git', 'config', '--global', 'credential.helper',
+                    'store --store=%s' % '/etc/stbt/auth/gitcredentials'])
+        try:
+            # We check out the git repo into a temporary directory, to allow
+            # running different tests (from potentially different git revisions
+            # or even different git repos) at the same time.
+            #
+            # After the tests have finished running, we cache the git checkout
+            # at /var/lib/stbt/test-pack to speed up the next checkout
+            # operation. So we try to use the cached checkout, but if we can't
+            # for any reason (it doesn't exist, is from a different origin, is
+            # corrupt) we fall back to a fresh git clone.
+            #
+            # We rely on `os.rename` being atomic to make the caching safe if
+            # multiple tests are run at the same time.
+            os.rename("test-pack", test_pack)
+            current_url = git(['config', 'remote.origin.url']).strip()
+            if url != current_url.strip():
+                raise StandardError()
+
+            git(['fetch', 'origin', '--prune', '--tags'])
+        except StandardError:
+            if os.path.exists(test_pack):
+                shutil.rmtree(test_pack)
+            check_call(['git', 'clone', '--no-checkout', url, test_pack])
+
+        for prefix in ('refs/remotes/origin/', 'refs/tags/', ''):
+            try:
+                rev = git(['rev-parse', '--verify', prefix + revision]).strip()
+                break
+            except CalledProcessError:
+                pass
+        else:
+            raise RuntimeError("Unknown revision %s" % revision)
+
+        git(['reset', '--hard', rev])
+
+        os.environ['STBT_CONFIG_FILE'] = tmpdir + '/stbt.conf'
+        # touch stbt.conf
+        open(tmpdir + '/stbt.conf', 'w').close()
+        try:
+            yield test_pack
+        finally:
+            try:
+                # Note that `os.rename` if the target directory already exists.
+                os.rename(test_pack, "test-pack")
+            except OSError:
+                pass
+
+
+def build_test_image(revision, test_pack_dir):
+    if os.path.exists(test_pack_dir + '/Dockerfile'):
+        image = 'tests:%s' % revision
+        check_call([
+            'docker', 'build', '--force-rm', '-t', image, test_pack_dir])
+    else:
+        image = 'stbtester/stb-tester-test-pack:latest'
+
+    return image
+
+
+def execute(test_pack_dir, image, command, extra_opts):
+    docker_cmd = (
+        ['docker', 'run',
+         '--rm=true',
+         '-v', '/etc/localtime:/etc/localtime:ro',
+         '-v',
+         '%s:/var/lib/stbt/test-pack:ro' %
+         container_to_host_path(test_pack_dir),
+         '-v', '%s:/var/lib/stbt/results' % container_to_host_path('results')]
+        + extra_opts + [image] + command)
+    sys.stderr.write("Will run: %s\n" % str(docker_cmd))
+
+    return check_call(docker_cmd)
+
+
+def _xdg_config_dir():
+    return os.environ.get('XDG_CONFIG_HOME', '%s/.config' % os.environ['HOME'])
+
+
+def _config_file_mount():
+    from os.path import exists
+    if exists(os.environ.get('STBT_CONFIG_FILE', '')):
+        return ['-v', '%s:/etc/stbt/stbt.conf:ro' %
+                container_to_host_path(os.environ['STBT_CONFIG_FILE'])]
+    elif exists('%s/stbt/stbt.conf' % _xdg_config_dir()):
+        return ['-v', '%s:/etc/stbt/stbt.conf:ro' %
+                container_to_host_path(_xdg_config_dir() + '/stbt/stbt.conf')]
+    else:
+        return []
+
+
+def main(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--test-pack-url', metavar='url', default='git://localhost/')
+    parser.add_argument(
+        '--test-pack-revision', default='HEAD')
+    parser.add_argument('--env', '-e', nargs='*')
+    parser.add_argument(
+        '--with-virtual-stb',
+        help="Run script with stbt configured to get input from virtual-stb. "
+             "The argument is the name of the docker image to run as passed to "
+             "build-virtual-stb")
+    parser.add_argument('command', nargs=argparse.REMAINDER)
+
+    args = parser.parse_args(argv[1:])
+
+    # Sanitize user input for security as we will be passing them to the git
+    # command line.
+    if args.test_pack_revision.startswith('-'):
+        sys.stderr.write('Invalid revision %s\n' % args.revision)
+        return 1
+    if args.test_pack_url.startswith('-') or \
+            ('::' not in args.test_pack_url
+             and '://' not in args.test_pack_url):
+        sys.stderr.write('Invalid url "%s"\n' % args.test_pack_url)
+        return 1
+
+    # Raise SystemExit on signals rather than exiting for graceful shutdown/
+    # cleanup
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+    signal.signal(signal.SIGHUP, lambda *_: sys.exit(0))
+
+    with repo(args.test_pack_url, args.test_pack_revision) as test_pack_dir:
+        image = build_test_image(args.test_pack_revision, test_pack_dir)
+
+        mkdir_p('run')
+        with named_temporary_directory(
+                prefix='%s/service-run-' % os.getcwd()) as tmp:
+            if args.with_virtual_stb:
+                os.environ['STBT_CONFIG_FILE'] = tmp + '/stbt.conf'
+                vstb_cmd_line = shlex.split(args.with_virtual_stb)
+                with virtual_stb(cmd=vstb_cmd_line[1:],
+                                 docker_image=vstb_cmd_line[0],
+                                 share_x=False) as vstb:
+                    execute(test_pack_dir, image, args.command, [
+                        '--volumes-from=%s' % vstb[0],
+                        '-v',
+                        '%s:/etc/stbt/stbt.conf' %
+                        container_to_host_path(os.environ['STBT_CONFIG_FILE'])])
+            else:
+                # docker rm will fail if the container already exists or is
+                # running, but we only do it to remove stale (non-running)
+                # containers so we don't need to check the exit code:
+                try:
+                    old_cid = check_output([
+                        'docker', 'inspect', '--format', '{{ .Id }}',
+                        'tests_using_hardware'], stderr=STDOUT)
+                    check_output(['docker', 'rm', old_cid], stderr=STDOUT)
+                except CalledProcessError:
+                    pass
+                execute(test_pack_dir, image, args.command, [
+                    # With this name Docker will ensure that only one test pack
+                    # has hardware access:
+                    '--name=tests_using_hardware',
+                    # Allow hardware access:
+                    '--privileged=true',
+                    '-v', '/run/lirc/:/run/lirc/'] + _config_file_mount())
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

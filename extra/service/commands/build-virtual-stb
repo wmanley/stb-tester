@@ -1,0 +1,42 @@
+#!/bin/bash
+
+NAME=$1
+URL=$2
+
+if [ -z "$NAME" ] || [ -z "$URL" ]; then
+    echo "Usage:  build-virtual-stb NAME URL" 1>&2
+fi
+
+docker_build_tarball() {
+    # Pipe a docker build context as a tarball into this function to build a
+    # docker image.
+    tmpdir=$(mktemp -dt virtual-stb-build-docker.XXXXXX) &&
+    trap "rm -rf $tmpdir" EXIT &&
+    tar -x -C "$tmpdir" &&
+
+    docker build "$@" "$tmpdir"
+}
+
+if [ "$URL" = '-' ]; then
+	src_cmd=cat
+elif [[ "$URL" == http://* ]] || [[ "$URL" == https://* ]]; then
+	# TODO: Make this safer with escaping URL
+	src_cmd="wget -qO- -- \"$URL\""
+else
+	echo "URL must be - or begin with http(s)://" 1>&2
+	exit 1
+fi
+
+if [[ "$NAME" != virtual-stb:* ]]; then
+	echo "Name must begin with virtual-stb:" 1>&2
+	exit 1
+fi
+
+docker rmi "$NAME"
+
+#TODO: sanitize $NAME to remove additional : and /
+
+$src_cmd | docker_build_tarball -t "$NAME" 1>&2 &&
+
+echo "Successfully built $NAME" 1>&2 &&
+echo $NAME
