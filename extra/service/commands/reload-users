@@ -1,0 +1,23 @@
+#!/bin/sh
+
+#
+# Regenerate authorized_keys from the keyfiles in /etc/stbt/users/.  This is
+# a quick hack and not a long-term solution to authentication for stb-tester.
+#
+# Usage (from outside the service container):
+#
+#     docker cp ~/.ssh/id_rsa.pub stbt-service:/etc/stbt/users/my-name.pub
+#     ssh stb-tester@stbt-service reload-users
+#
+
+mkdir -p $HOME/.ssh/
+chmod 0700 $HOME/.ssh
+(
+    for keyfile in /etc/stbt/users/*.pub;
+    do
+        echo 'command="stbt-ssh-endpoint $SSH_ORIGINAL_COMMAND",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty' "$(cat "$keyfile")"
+    done
+) | sponge $HOME/.ssh/authorized_keys
+
+# TODO: Read known_hosts from /etc/stbt/known_hosts.d
+printf "StrictHostKeyChecking no\nUserKnownHostsFile=/dev/null" >$HOME/.ssh/config

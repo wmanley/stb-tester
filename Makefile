@@ -49,7 +49,7 @@ ESCAPED_VERSION=$(subst -,_,$(VERSION))
 
 all: stbt.sh stbt.1 extra/fedora/stb-tester.spec
 
-extra/fedora/stb-tester.spec extra/debian/changelog stbt.sh : % : %.in .stbt-prefix VERSION
+extra/service/stbt-ssh-endpoint.py extra/fedora/stb-tester.spec extra/debian/changelog stbt.sh : % : %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
 	    -e 's,@ESCAPED_VERSION@,$(ESCAPED_VERSION),g' \
 	    -e 's,@LIBEXECDIR@,$(libexecdir),g' \
@@ -59,11 +59,12 @@ extra/fedora/stb-tester.spec extra/debian/changelog stbt.sh : % : %.in .stbt-pre
 	    -e 's,@USER_EMAIL@,$(user_email),g' \
 	     $< > $@
 
-install: stbt.sh stbt.1
+install: install-stbt-common install-virtual-stb stbt.1
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
 	    $(DESTDIR)$(libexecdir)/stbt \
 	    $(DESTDIR)$(libexecdir)/stbt/_stbt \
+	    $(DESTDIR)$(libexecdir)/stbt/extra/service \
 	    $(DESTDIR)$(libexecdir)/stbt/extra/virtual-stb \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d \
@@ -72,7 +73,6 @@ install: stbt.sh stbt.1
 	    $(DESTDIR)$(man1dir) \
 	    $(DESTDIR)$(sysconfdir)/stbt \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d
-	$(INSTALL) -m 0755 stbt.sh $(DESTDIR)$(bindir)/stbt
 	$(INSTALL) -m 0755 irnetbox-proxy $(DESTDIR)$(bindir)
 	$(INSTALL) -m 0755 $(tools) $(DESTDIR)$(libexecdir)/stbt
 	$(INSTALL) -m 0644 \
@@ -102,13 +102,56 @@ install: stbt.sh stbt.1
 	    stbt-batch.d/templates/index.html \
 	    stbt-batch.d/templates/testrun.html \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d/templates
-	$(INSTALL) -m 0644 extra/virtual-stb/virtual-stb.py \
-	    extra/virtual-stb/xorg.conf.jinja2 \
-	    $(DESTDIR)$(libexecdir)/stbt/extra/virtual-stb
+	$(INSTALL) -m 0755 \
+	    extra/service/test-pack-entrypoint.sh \
+	    $(DESTDIR)$(libexecdir)/stbt/extra/service
 	$(INSTALL) -m 0644 stbt.1 $(DESTDIR)$(man1dir)
 	$(INSTALL) -m 0644 desktop.conf $(DESTDIR)$(sysconfdir)/stbt/stbt.conf
 	$(INSTALL) -m 0644 stbt-completion \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
+
+install-stbt-common: stbt.sh
+	$(INSTALL) -m 0755 -d \
+	    $(DESTDIR)$(bindir) \
+	    $(DESTDIR)$(libexecdir)/stbt \
+	    $(DESTDIR)$(libexecdir)/stbt/_stbt && \
+	$(INSTALL) -m 0644 \
+	    _stbt/__init__.py \
+	    _stbt/config.py \
+	    _stbt/docker.py \
+	    _stbt/logging.py \
+	    _stbt/notify.py \
+	    _stbt/utils.py \
+	    $(DESTDIR)$(libexecdir)/stbt/_stbt
+	$(INSTALL) -m 0755 stbt.sh $(DESTDIR)$(bindir)/stbt
+	sed 's,@SYSCONFDIR@,$(sysconfdir),g' stbt.conf \
+	    >$(DESTDIR)$(libexecdir)/stbt/stbt.conf
+
+install-virtual-stb: install-stbt-common
+	$(INSTALL) -m 0755 -d \
+	    $(DESTDIR)$(libexecdir)/stbt/extra/virtual-stb
+	$(INSTALL) -m 0755 stbt-virtual-stb $(DESTDIR)$(libexecdir)/stbt
+	$(INSTALL) -m 0644 \
+	    _stbt/virtual_stb.py \
+	    $(DESTDIR)$(libexecdir)/stbt/_stbt
+	$(INSTALL) -m 0644 \
+	    extra/virtual-stb/key-mapping.conf \
+	    extra/virtual-stb/virtual_stb.py \
+	    extra/virtual-stb/virtual-stb-impl.py \
+	    extra/virtual-stb/xorg.conf.jinja2 \
+	    $(DESTDIR)$(libexecdir)/stbt/extra/virtual-stb
+
+install-service: install-stbt-common install-virtual-stb extra/service/stbt-ssh-endpoint.py
+	$(INSTALL) -m 0755 -d \
+	    $(DESTDIR)$(libexecdir)/stbt/extra/service/commands && \
+	$(INSTALL) extra/service/stbt-ssh-endpoint.py \
+	    $(DESTDIR)$(bindir)/stbt-ssh-endpoint
+	$(INSTALL) -m 0755 \
+		extra/service/commands/build-virtual-stb \
+		extra/service/commands/reload-users \
+		extra/service/commands/run \
+		extra/service/commands/setup-lirc \
+		$(DESTDIR)$(libexecdir)/stbt/extra/service/commands
 
 uninstall:
 	rm -f $(DESTDIR)$(bindir)/stbt
@@ -144,7 +187,7 @@ check-nosetests: tests/ocr/menu.png
 	# Workaround for https://github.com/nose-devs/nose/issues/49:
 	cp stbt-control nosetest-issue-49-workaround-stbt-control.py && \
 	nosetests --with-doctest -v --match "^test_" \
-	    $(shell git ls-files '*.py' | grep -v tests/test.py) \
+	    $(shell git ls-files '*.py' | grep -v tests/test.py | grep -v service/test-packs) \
 	    nosetest-issue-49-workaround-stbt-control.py && \
 	rm nosetest-issue-49-workaround-stbt-control.py
 check-integrationtests: install-for-test
@@ -319,15 +362,39 @@ copr-publish: $(src_rpm)
 
 # Docker images
 
-docker-build : stb-tester-$(VERSION).tar.gz
+docker_images = \
+	serve-results \
+	service \
+	service-credentials \
+	service-results \
+	test-pack \
+	virtual-stb
+
+docker_prefix?=stbtester/
+docker_tag?=latest
+
+$(patsubst Dockerfile.%,docker-build-%,$(wildcard Dockerfile.*)) : docker-build-% : stb-tester-$(VERSION).tar.gz
 	tmpdir=$$(mktemp -d) && \
 	tar -C "$$tmpdir" -xzf $(abspath $<) && \
+	ln -sf Dockerfile.$* $$tmpdir/stb-tester-$(VERSION)/Dockerfile && \
 	find "$$tmpdir/stb-tester-$(VERSION)" -print0 | xargs -0 touch -cht 197001010000.00 && \
-	docker.io build --rm=false -t stb-tester:$(VERSION) "$$tmpdir/stb-tester-$(VERSION)" && \
-	docker.io tag stb-tester:$(VERSION) stb-tester:makefile && \
+	docker build -t $(docker_prefix)stb-tester-$*:$(VERSION) "$$tmpdir/stb-tester-$(VERSION)" && \
+	docker tag $(docker_prefix)stb-tester-$*:$(VERSION) $(docker_prefix)stb-tester-$*:$(docker_tag) && \
 	rm -rf "$$tmpdir" && \
-	printf "Run with:\n    docker.io run stb-tester:$(VERSION)\n" && \
-	printf " or with:\n    docker.io run stb-tester:makefile\n"
+	printf "Run with:\n    docker run $(docker_prefix)stb-tester-$*:$(VERSION)\n" && \
+	printf " or with:\n    docker run $(docker_prefix)stb-tester-$*:$(docker_tag)\n"
+
+docker-build : $(patsubst %,docker-build-%,$(docker_images))
+docker-publish : docker-build
+	for image in $(patsubst %,$(docker_prefix)stb-tester-%:$(docker_tag),$(docker_images)) \
+	             $(patsubst %,$(docker_prefix)stb-tester-%:$(VERSION),$(docker_images)); \
+	do \
+	    docker push $$image; \
+	done
+
+docker-build-serve-results :
+	docker build -t $(docker_prefix)stb-tester-serve-results:$(VERSION) extra/service/serve-results
+	docker tag $(docker_prefix)stb-tester-serve-results:$(VERSION) $(docker_prefix)stb-tester-serve-results:$(docker_tag)
 
 .PHONY: all clean check deb dist doc docker-build install uninstall
 .PHONY: check-bashcompletion check-hardware check-integrationtests

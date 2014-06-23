@@ -1,0 +1,36 @@
+# ==============================================================================
+# Container to be used as a base image for test packs:
+
+# NAME test-pack
+
+FROM ubuntu:14.04
+MAINTAINER will@stb-tester.com
+
+RUN adduser --home /var/lib/stbt --uid 1000 --disabled-password --gecos "" \
+        stb-tester && \
+    echo "stb-tester    ALL=(ALL:ALL) NOPASSWD:ALL" >/etc/sudoers.d/stb-tester
+
+USER stb-tester
+WORKDIR /var/lib/stbt
+ENV HOME /var/lib/stbt
+
+ADD extra/debian/control /tmp/runtime-deps
+RUN export DEBIAN_FRONTEND=noninteractive && \
+    sudo apt-get update && \
+    sudo apt-get dist-upgrade -y && \
+    sudo apt-get install -y $(awk '/^         [^$ ]/ {print $1}' /tmp/runtime-deps | sed 's/,//g') && \
+    sudo apt-get clean && \
+    sudo rm /tmp/runtime-deps
+
+ADD . /tmp/source
+RUN /tmp/source/docker-make.sh install && \
+    sudo rm -Rf /tmp/source
+
+RUN mkdir -p /var/lib/stbt/results /var/lib/stbt/test-pack
+
+WORKDIR /var/lib/stbt/test-pack
+ENV STBT_CONFIG_FILE /var/lib/stbt/test-pack/.stbt.conf
+
+ENTRYPOINT ["/usr/lib/stbt/extra/service/test-pack-entrypoint.sh"]
+CMD ["stbt", "batch", "run", "-o", "/var/lib/stbt/results/default", \
+     "test-pack/tests/"]

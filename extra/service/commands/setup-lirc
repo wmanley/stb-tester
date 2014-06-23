@@ -1,0 +1,16 @@
+#!/bin/bash
+
+REMOTE_NAME=$1
+
+if [ -z "$REMOTE_NAME" ] || [[ "$REMOTE_NAME" == -* ]]; then
+    echo "Usage: setup-lirc remote_name <lircd.conf" 2>&1
+    exit 1
+fi
+
+mkdir -p config &&
+sponge config/lircd.conf &&
+echo "$REMOTE_NAME" >config/lirc_remote_name
+
+[ -s config/lircd.conf ] || fail "Empty lircd.conf provided.  You must pipe in a valid lircd.conf"
+
+sudo service lircd restart

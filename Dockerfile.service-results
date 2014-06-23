@@ -1,0 +1,28 @@
+# ==============================================================================
+# Data volume container image for storing test results while allowing other
+# containers (that run the tests or that serve the results) to be stateless.
+# This allows the "stb-tester as a service" containers to run stateless making
+# for easy upgrades.
+#
+#     # Create container
+#     docker run -i --name="stbt-service-results" \
+#         stbtester/stb-tester-service-results
+
+# NAME service-results
+
+FROM ubuntu:14.04
+MAINTAINER will@stb-tester.com
+
+RUN adduser --home /var/lib/stbt --uid 1000 --disabled-password --gecos "" \
+        stb-tester
+
+RUN mkdir -p /var/lib/stbt/results && \
+    chown stb-tester:stb-tester /var/lib/stbt/results
+
+VOLUME /var/lib/stbt/results
+
+USER stb-tester
+
+CMD ["echo", "This is a data volume container for test results.  It is not", \
+     "intended to be run directly but used by instances of", \
+     "stb-tester/service via `docker run --volumes-from`"]
