@@ -324,8 +324,10 @@ docker-build : stb-tester-$(VERSION).tar.gz
 	tar -C "$$tmpdir" -xzf $(abspath $<) && \
 	find "$$tmpdir/stb-tester-$(VERSION)" -print0 | xargs -0 touch -cht 197001010000.00 && \
 	docker.io build --rm=false -t stb-tester:$(VERSION) "$$tmpdir/stb-tester-$(VERSION)" && \
+	docker.io tag stb-tester:$(VERSION) stb-tester:makefile && \
 	rm -rf "$$tmpdir" && \
-	printf "Run with:\n    docker.io run stb-tester:$(VERSION)\n"
+	printf "Run with:\n    docker.io run stb-tester:$(VERSION)\n" && \
+	printf " or with:\n    docker.io run stb-tester:makefile\n"
 
 .PHONY: all clean check deb dist doc docker-build install uninstall
 .PHONY: check-bashcompletion check-hardware check-integrationtests
