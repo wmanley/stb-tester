@@ -27,8 +27,8 @@
 <div class="span4">
 
 <p><a id="permalink" href="">[Link to this result]</a>
-{% if run.video %}
-  <video src="{{run.video}}" preload="none" poster="thumbnail.jpg" controls></video>
+{% if run.video() %}
+  <video src="{{run.video()}}" preload="none" poster="thumbnail.jpg" controls></video>
 {% endif %}
 <p><b>Timestamp:</b> {{run.timestamp}}
 
@@ -61,7 +61,7 @@
 <p id="notes">{{run.notes or "&nbsp;"}}</p>
 
 <ul class="thumbnails">
-{% for image in run.images %}
+{% for image in run.images() %}
   <li class="span4">
     <div class="thumbnail">
       <a href="{{image}}"><img src="{{image}}" alt=""></a>
@@ -72,7 +72,7 @@
 </ul>
 
 <p><b>Logs:</b>
-{% for f in run.files %}
+{% for f in run.logfiles() %}
   <p><a href="{{f}}">{{f}}</a>
 {% endfor %}
 
