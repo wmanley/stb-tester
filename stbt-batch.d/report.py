@@ -92,17 +92,7 @@ def read_run_dir(rundir):
     for col in text_columns:
         data[col.replace('-', '_')] = read_file(rundir, col)
 
-    if os.path.exists(rundir + '/video.webm'):
-        data["video"] = 'video.webm'
-
-    allfiles = os.listdir(rundir)
-    data['files'] = [f for f in allfiles
-                     if f not in text_columns
-                     and f not in ['exit-status', 'duration']
-                     and not f.endswith('.png')
-                     and not f.endswith('.manual')
-                     and not f.startswith('index.html')]
-    data['images'] = [f for f in allfiles if f.endswith('.png')]
+    data['files'] = os.listdir(rundir)
 
     extra_columns = collections.OrderedDict()
     for line in read_file(rundir, "extra-columns").splitlines():
@@ -134,9 +124,26 @@ class Run(object):
                 }.get(self.data['exit_status'],
                       'warning')  # Yellow: Test infrastructure error
 
+    def logfiles(self):
+        return [f for f in self.data['files']
+                if f not in text_columns
+                and f not in ['exit-status', 'duration']
+                and not f.endswith('.png')
+                and not f.endswith('.manual')
+                and not f.startswith('index.html')]
+
+    def images(self):
+        return [f for f in self.data['files'] if f.endswith('.png')]
+
     def duration_hh_mm_ss(self):
         s = self.data['duration']
         return "%02d:%02d:%02d" % (s / 3600, (s % 3600) / 60, s % 60)
+
+    def video(self):
+        if os.path.exists(self.rundir + '/video.webm'):
+            return 'video.webm'
+        else:
+            return None
 
 
 def die(message):
