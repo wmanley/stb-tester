@@ -48,7 +48,7 @@ def index(parentdir):
     rundirs = [
         dirname(x) for x in glob.glob(
             os.path.join(parentdir, "????-??-??_??.??.??*/test-name"))]
-    runs = [Run(d) for d in sorted(rundirs, reverse=True)]
+    runs = [Run(read_run_dir(d)) for d in sorted(rundirs, reverse=True)]
     if len(runs) == 0:
         die("Directory '%s' doesn't contain any testruns" % parentdir)
     print templates.get_template("index.html").render(
@@ -82,7 +82,7 @@ int_columns = ['exit-status', 'duration']
 
 
 def read_run_dir(rundir):
-    data = {}
+    data = {'rundir': rundir}
     for col in int_columns:
         try:
             data[col.replace('-', '_')] = int(read_file(rundir, col))
@@ -110,9 +110,7 @@ def read_run_dir(rundir):
 
 
 class Run(object):
-    def __init__(self, rundir):
-        self.rundir = rundir
-        data = read_run_dir(rundir)
+    def __init__(self, data):
         for k, v in data.iteritems():
             setattr(self, k, v)
         self.data = data
