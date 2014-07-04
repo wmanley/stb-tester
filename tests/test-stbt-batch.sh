@@ -256,7 +256,7 @@ test_stbt_batch_run_with_custom_recovery_script() {
     [[ $? -eq $timedout ]] && fail "'stbt batch run' timed out"
 
     grep -q '>powercycle.log</a>' latest/index.html ||
-        fail "Custom recovery script's log missing from report"
+        fail "Custom recovery scripts log missing from report"
 }
 
 test_stbt_batch_run_recovery_exit_status() {

@@ -65,80 +65,77 @@ def testrun(rundir):
     ).encode('utf-8')
 
 
+def read_file(rundir, name):
+    f = os.path.join(rundir, name)
+    for filename in [f + '.manual', f]:
+        try:
+            with open(filename) as data:
+                return escape(data.read().decode('utf-8').strip())
+        except IOError:
+            pass
+    return u""
+
+
+text_columns = ["failure-reason", "git-commit", "notes", "test-args",
+                "test-name"]
+int_columns = ['exit-status', 'duration']
+
+
+def read_run_dir(rundir):
+    data = {}
+    for col in int_columns:
+        try:
+            data[col.replace('-', '_')] = int(read_file(rundir, col))
+        except ValueError:
+            data[col.replace('-', '_')] = None
+
+    for col in text_columns:
+        data[col.replace('-', '_')] = read_file(rundir, col)
+
+    if os.path.exists(rundir + '/video.webm'):
+        data["video"] = 'video.webm'
+
+    allfiles = os.listdir(rundir)
+    data['files'] = [f for f in allfiles
+                     if f not in text_columns
+                     and f not in ['exit-status', 'duration']
+                     and not f.endswith('.png')
+                     and not f.endswith('.manual')
+                     and not f.startswith('index.html')]
+    data['images'] = [f for f in allfiles if f.endswith('.png')]
+
+    extra_columns = collections.OrderedDict()
+    for line in read_file(rundir, "extra-columns").splitlines():
+        column, value = line.split("\t", 1)
+        extra_columns.setdefault(column.strip(), [])
+        extra_columns[column.strip()].append(value.strip())
+    data['extra_columns'] = extra_columns
+
+    t = re.match(
+        r"\d{4}-\d{2}-\d{2}_\d{2}\.\d{2}\.\d{2}", basename(rundir))
+    assert t, "Invalid rundir '%s'" % rundir
+    data['timestamp'] = datetime.strptime(t.group(), "%Y-%m-%d_%H.%M.%S")
+
+    return data
+
+
 class Run(object):
     def __init__(self, rundir):
         self.rundir = rundir
-
-        try:
-            self.exit_status = int(self.read("exit-status"))
-        except ValueError:
-            self.exit_status = "still running"
-
-        self.duration = self.read_seconds("duration")
-        self.failure_reason = self.read("failure-reason")
-        self.git_commit = self.read("git-commit")
-        self.notes = self.read("notes")
-        self.test_args = self.read("test-args")
-        self.test_name = self.read("test-name")
-
-        if os.path.exists(rundir + '/video.webm'):
-            self.video = 'video.webm'
-
-        if self.exit_status != "still running":
-            self.files = sorted([
-                basename(x) for x in glob.glob(rundir + "/*")
-                if basename(x) not in [
-                    "duration",
-                    "exit-status",
-                    "extra-columns",
-                    "failure-reason",
-                    "git-commit",
-                    "test-args",
-                    "test-name",
-                ]
-                and not x.endswith(".png")
-                and not x.endswith(".manual")
-                and not basename(x).startswith("index.html")
-            ])
-            self.images = sorted([
-                basename(x) for x in glob.glob(rundir + "/*.png")])
-
-        self.extra_columns = collections.OrderedDict()
-        for line in self.read("extra-columns").splitlines():
-            column, value = line.split("\t", 1)
-            self.extra_columns.setdefault(column.strip(), [])
-            self.extra_columns[column.strip()].append(value.strip())
-
-        t = re.match(
-            r"\d{4}-\d{2}-\d{2}_\d{2}\.\d{2}\.\d{2}", basename(rundir))
-        assert t, "Invalid rundir '%s'" % rundir
-        self.timestamp = datetime.strptime(t.group(), "%Y-%m-%d_%H.%M.%S")
+        data = read_run_dir(rundir)
+        for k, v in data.iteritems():
+            setattr(self, k, v)
+        self.data = data
 
     def css_class(self):
-        if self.exit_status == "still running":
-            return "muted"  # White
-        elif self.exit_status == 0:
-            return "success"
-        elif self.exit_status == 1:
-            return "error"  # Red: Possible system-under-test failure
-        else:
-            return "warning"  # Yellow: Test infrastructure error
+        return {None: "muted",   # White
+                0: "success",
+                1: "error",      # Red: Possible system-under-test failure
+                }.get(self.data['exit_status'],
+                      'warning')  # Yellow: Test infrastructure error
 
-    def read(self, f):
-        f = os.path.join(self.rundir, f)
-        if os.path.exists(f + ".manual"):
-            return escape(open(f + ".manual").read().decode('utf-8').strip())
-        elif os.path.exists(f):
-            return open(f).read().decode('utf-8').strip()
-        else:
-            return ""
-
-    def read_seconds(self, f):
-        s = self.read(f)
-        try:
-            s = int(s)
-        except ValueError:
-            s = 0
+    def duration_hh_mm_ss(self):
+        s = self.data['duration']
         return "%02d:%02d:%02d" % (s / 3600, (s % 3600) / 60, s % 60)
 
 
