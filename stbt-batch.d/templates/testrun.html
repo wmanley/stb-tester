@@ -52,8 +52,8 @@
 {% endif %}
 
 {% for key in run.extra_columns %}
-  <p class="extra_columns"><b>{{key}}:</b> {{
-    "\n".join(run.extra_columns[key])
+  <p class="extra_columns"><b>{{key.replace('_', ' ')}}:</b> {{
+    run.extra_columns[key]
   }}</p>
 {% endfor %}
 

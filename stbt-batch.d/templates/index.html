@@ -66,51 +66,14 @@
       <div id="plot"></div>
       <table id="testruns" class="table table-condensed sortable">
       <thead>
-      <tr>
-        <th>Timestamp</th>
-        <th>Test</th>
-        <th>Commit</th>
-        <th>Exit status</th>
-        <th>Notes</th>
-        <th>Duration</th>
-        {% for column in extra_columns %}
-          <th>{{column}}</th>
-        {% endfor %}
-      </tr>
+        <tr>@HEADINGS@</tr>
       </thead>
       <tbody>
-      {% for run in runs %}
-      <tr class="{{run.css_class()}}">
-        <td>{{run.timestamp}}</td>
-        <td>
-          {% if run.exit_status is not defined %}
-            <a href="{{run.rundir}}/index.html" target="details">
-          {% endif %}
-              {{run.test_name}} {{run.test_args}}
-          {% if run.exit_status is not defined %}
-            </a>
-          {% endif %}
-        </td>
-        <td>{{run.git_commit}}</td>
-        <td>
-          {% if run.exit_status is defined %}
-            still running
-          {% else %}
-            {{run.exit_status}}
-          {% endif %}
-          {% if run.failure_reason not in ("", "success") %}
-            — <span>{{ run.failure_reason | truncate(30, True) }}</span>
-          {% endif %}
-        </td>
-        <td>{{ run.notes | striptags | truncate(30, True) }}</td>
-        <td>{{run.duration_hh_mm_ss()}}</td>
-        {% for column in extra_columns %}
-          <td style="white-space: pre">{{
-            "\n".join(run.extra_columns.get(column, ""))
-          }}</td>
+        {% for run in runs %}
+          <tr class="{{run.css_class()}}">
+            @ROW@
+          </tr>
         {% endfor %}
-      </tr>
-      {% endfor %}
       </tbody>
       </table>
     </div>

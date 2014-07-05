@@ -1,10 +1,13 @@
 #!/usr/bin/env python
+# coding: utf-8
 
 # Copyright 2013 YouView TV Ltd.
 # License: LGPL v2.1 or (at your option) any later version (see
 # https://github.com/drothlis/stb-tester/blob/master/LICENSE for details).
 
 """Generates reports from logs of stb-tester test runs created by 'run'."""
+
+from __future__ import unicode_literals
 
 import collections
 import glob
@@ -51,17 +54,23 @@ def index(parentdir):
     runs = [Run(read_run_dir(d)) for d in sorted(rundirs, reverse=True)]
     if len(runs) == 0:
         die("Directory '%s' doesn't contain any testruns" % parentdir)
-    print templates.get_template("index.html").render(
+
+    extra_columns = set(
+        itertools.chain(*[x.extra_columns.keys() for x in runs]))
+    columns = (standard_columns +
+               [(col.replace('_', ' '),
+                 '<td>{{run.extra_columns.%s}}</td>' % col.replace(' ', '_'))
+                for col in extra_columns])
+
+    tf = TemplateFactory()
+    print tf.get_template(columns).render(
         name=basename(abspath(parentdir)).replace("_", " "),
-        runs=runs,
-        extra_columns=set(
-            itertools.chain(*[x.extra_columns.keys() for x in runs])),
-    ).encode('utf-8')
+        runs=runs).encode('utf-8')
 
 
 def testrun(rundir):
     print templates.get_template("testrun.html").render(
-        run=Run(rundir),
+        run=Run(read_run_dir(rundir)),
     ).encode('utf-8')
 
 
@@ -75,6 +84,44 @@ def read_file(rundir, name):
             pass
     return u""
 
+standard_columns = [
+    ('Timestamp',),
+    ('Test', '<td><a href="{{run.rundir}}/index.html" target="details">{{run.test_name}} {{run.test_args}}</a></td>'),
+    ('Commit', '<td>{{run.git_commit}}</td>'),
+    ('Exit status', """<td>
+        {% if run.exit_status is defined %}
+          still running
+        {% else %}
+          {{run.exit_status}}
+        {% endif %}
+        {% if run.failure_reason not in ("", "success") %}
+          — <span>{{ run.failure_reason | truncate(30, True) }}</span>
+        {% endif %}</td>"""),
+    ('Notes', '<td>{{ run.notes | striptags | truncate(30, True) }} </td>'),
+    ('Duration', '<td>{{ run.duration_hh_mm_ss() }}</td>'),
+]
+
+
+def col_to_template(col):
+    if len(col) == 2:
+        return col[1]
+    else:
+        return '<td>{{run.' + col[0].lower().replace(' ', '_') + '}}</td>'
+
+
+class TemplateFactory(object):
+    def __init__(self, name='index.html'):
+        with open("%s/templates/%s" % (os.path.dirname(__file__), name)) as t:
+            self.base_template = t.read().decode('utf-8')
+
+    def get_template(self, columns):
+        column_headings_template = \
+            "<th>" + '</th><th>'.join(c[0] for c in columns) + "</th>"
+        row_template = "".join(col_to_template(col) for col in columns)
+        composite_template = self.base_template \
+            .replace('@HEADINGS@', column_headings_template) \
+            .replace('@ROW@', row_template)
+        return jinja2.Template(composite_template)
 
 text_columns = ["failure-reason", "git-commit", "notes", "test-args",
                 "test-name"]
@@ -96,9 +143,14 @@ def read_run_dir(rundir):
 
     extra_columns = collections.OrderedDict()
     for line in read_file(rundir, "extra-columns").splitlines():
-        column, value = line.split("\t", 1)
-        extra_columns.setdefault(column.strip(), [])
-        extra_columns[column.strip()].append(value.strip())
+        s = line.split("\t", 1)
+        if len(s) == 2:
+            column, value = s
+            name = column.strip().replace(' ', '_')
+            if name in extra_columns:
+                extra_columns[name] += '\n' + value.strip()
+            else:
+                extra_columns[name] = value.strip()
     data['extra_columns'] = extra_columns
 
     t = re.match(
@@ -134,11 +186,11 @@ class Run(object):
         return [f for f in self.data['files'] if f.endswith('.png')]
 
     def duration_hh_mm_ss(self):
-        s = self.data['duration']
+        s = self.data['duration'] or 0
         return "%02d:%02d:%02d" % (s / 3600, (s % 3600) / 60, s % 60)
 
     def video(self):
-        if os.path.exists(self.rundir + '/video.webm'):
+        if os.path.exists(self.data['rundir'] + '/video.webm'):
             return 'video.webm'
         else:
             return None
