@@ -19,6 +19,7 @@ from datetime import datetime
 from os.path import abspath, basename, dirname, isdir
 
 import jinja2
+import yaml
 
 escape = jinja2.Markup.escape
 
@@ -57,10 +58,17 @@ def index(parentdir):
 
     extra_columns = set(
         itertools.chain(*[x.extra_columns.keys() for x in runs]))
-    columns = (standard_columns +
-               [(col.replace('_', ' '),
-                 '<td>{{run.extra_columns.%s}}</td>' % col.replace(' ', '_'))
-                for col in extra_columns])
+    try:
+        with open('columns.yaml', 'r') as columns_yaml:
+            columns = yaml.safe_load(columns_yaml)
+    except IOError:
+        with open(dirname(__file__) + '/columns.yaml', 'r') as columns_yaml:
+            columns = (
+                yaml.safe_load(columns_yaml) +
+                [{'title': col.replace('_', ' '),
+                  'format': '<td>{{run.extra_columns.%s}}</td>'
+                            % col.replace(' ', '_')}
+                 for col in extra_columns])
 
     tf = TemplateFactory()
     print tf.get_template(columns).render(
@@ -84,29 +92,14 @@ def read_file(rundir, name):
             pass
     return u""
 
-standard_columns = [
-    ('Timestamp',),
-    ('Test', '<td><a href="{{run.rundir}}/index.html" target="details">{{run.test_name}} {{run.test_args}}</a></td>'),
-    ('Commit', '<td>{{run.git_commit}}</td>'),
-    ('Exit status', """<td>
-        {% if run.exit_status is defined %}
-          still running
-        {% else %}
-          {{run.exit_status}}
-        {% endif %}
-        {% if run.failure_reason not in ("", "success") %}
-          — <span>{{ run.failure_reason | truncate(30, True) }}</span>
-        {% endif %}</td>"""),
-    ('Notes', '<td>{{ run.notes | striptags | truncate(30, True) }} </td>'),
-    ('Duration', '<td>{{ run.duration_hh_mm_ss() }}</td>'),
-]
+
+def column_cell_format(col):
+    return col.get('format', None) \
+        or '<td>{{ run.%s }}</td>' % col.get('title').lower().replace(' ', '_')
 
 
-def col_to_template(col):
-    if len(col) == 2:
-        return col[1]
-    else:
-        return '<td>{{run.' + col[0].lower().replace(' ', '_') + '}}</td>'
+def column_heading_format(col):
+    return col.get('heading', None) or "<th>%s</th>" % col.get('title')
 
 
 class TemplateFactory(object):
@@ -116,8 +109,9 @@ class TemplateFactory(object):
 
     def get_template(self, columns):
         column_headings_template = \
-            "<th>" + '</th><th>'.join(c[0] for c in columns) + "</th>"
-        row_template = "".join(col_to_template(col) for col in columns)
+            ''.join(column_heading_format(col) for col in columns)
+        row_template = \
+            "".join(column_cell_format(col) for col in columns)
         composite_template = self.base_template \
             .replace('@HEADINGS@', column_headings_template) \
             .replace('@ROW@', row_template)

@@ -221,9 +221,9 @@ test_stbt_batch_run_with_custom_logging() {
     grep -q '<th>stop time</th>' index.html ||
         fail "'stop time' missing from report"
 
-    grep -q '<th>start time</th>' */index.html ||
+    grep -q '<b>start time:</b>' */index.html ||
         fail "'start time' missing from side bar"
-    grep -q '<th>stop time</th>' */index.html ||
+    grep -q '<b>stop time:</b>' */index.html ||
         fail "'stop time' missing from side bar"
 }
 
