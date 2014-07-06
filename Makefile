@@ -106,6 +106,7 @@ install-core : install-stbt-common install-virtual-stb stbt.sh stbt.1
 	    stbt-batch.d/instaweb \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d
 	$(INSTALL) -m 0644 stbt-batch.d/report.py \
+	    stbt-batch.d/columns.yaml \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d
 	$(INSTALL) -m 0644 stbt-batch.d/static/edit-testrun.js \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d/static

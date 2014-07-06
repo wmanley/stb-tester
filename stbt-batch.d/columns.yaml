@@ -1,0 +1,33 @@
+-
+  title: Timestamp
+-
+  title: Test
+  format: |
+    <td><a href="{{run.rundir}}/index.html" target="details">
+      {{run.test_name}} {{run.test_args}}
+    </a></td>
+-
+  title: Commit
+  format: |
+    <td>{{run.git_commit}}</td>
+-
+  title: Exit status
+  format: |
+    <td>
+      {% if run.exit_status is defined %}
+        {{run.exit_status}}
+      {% else %}
+        still running
+      {% endif %}
+      {% if run.failure_reason not in ("", "success") %}
+        — <span>{{ run.failure_reason | truncate(30, True) }}</span>
+      {% endif %}
+    </td>
+-
+  title: Notes
+  format: |
+    <td>{{ run.notes | striptags | truncate(30, True) }} </td>
+-
+  title: Duration
+  format: |
+    <td>{{ run.duration_hh_mm_ss() }}</td>
