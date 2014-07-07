@@ -21,9 +21,6 @@ from os.path import abspath, basename, dirname, isdir
 import jinja2
 import yaml
 
-escape = jinja2.Markup.escape
-
-
 templates = jinja2.Environment(loader=jinja2.FileSystemLoader(
     os.path.join(os.path.dirname(__file__), "templates")))
 
@@ -87,7 +84,7 @@ def read_file(rundir, name):
     for filename in [f + '.manual', f]:
         try:
             with open(filename) as data:
-                return escape(data.read().decode('utf-8').strip())
+                return data.read().decode('utf-8').strip()
         except IOError:
             pass
     return u""

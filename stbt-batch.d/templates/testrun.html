@@ -58,7 +58,7 @@
 {% endfor %}
 
 <p><b>Notes:</b></p>
-<p id="notes">{{run.notes or "&nbsp;"}}</p>
+<p id="notes">{{run.notes | safe}}</p>
 
 <ul class="thumbnails">
 {% for image in run.images() %}
