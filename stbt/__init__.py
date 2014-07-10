@@ -26,7 +26,6 @@ from collections import deque, namedtuple
 from contextlib import contextmanager
 from distutils.version import LooseVersion
 
-import cv2
 import gi
 import numpy
 from gi.repository import GLib, GObject, Gst  # pylint: disable=E0611
@@ -72,6 +71,10 @@ __all__ = [
     "wait_for_match",
     "wait_for_motion",
 ]
+
+with utils.hide_stderr():  # Hide "Failed to initialize libdc1394" on Ubuntu.
+    import cv2
+
 
 if getattr(gi, "version_info", (0, 0, 0)) < (3, 12, 0):
     GObject.threads_init()
