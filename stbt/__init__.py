@@ -1066,7 +1066,10 @@ def _tesseract(frame, region=Region.ALL,
             cmd += ['stbtester']
 
         cv2.imwrite(tmp + '/input.png', subframe)
-        subprocess.check_output(cmd, stderr=subprocess.STDOUT, env=tessenv)
+        try:
+            subprocess.check_output(cmd, stderr=subprocess.STDOUT, env=tessenv)
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError("%s. Output was: %s" % (e, e.output))
         with open(outdir + '/' + os.listdir(outdir)[0], 'r') as outfile:
             return (outfile.read(), region)
 
