@@ -1,6 +1,17 @@
 $(document).ready(function() {
     // http://vitalets.github.io/x-editable/docs.html
     $.fn.editable.defaults.mode = "inline";
+    $("#exit-status").editable({
+        type: "select",
+        source: [
+            {value: 0, text: "success"},
+            {value: 1, text: "failure"},
+            {value: 2, text: "error"},
+        ],
+        url: "exit-status",
+        send: "always",
+        toggle: "dblclick",
+    });
     $("#failure-reason").editable({
         type: "textarea",
         url: "failure-reason",
@@ -24,7 +35,7 @@ $(document).ready(function() {
         },
     });
     // http://getbootstrap.com/2.3.2/javascript.html#tooltips
-    $("#failure-reason, #notes").tooltip({
+    $("#exit-status, #failure-reason, #notes").tooltip({
         title: "Double-click to edit",
     });
 

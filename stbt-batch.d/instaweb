@@ -58,6 +58,9 @@ def catch_all(path):
     defaults={"filename": "failure-reason"})
 @app.route(
     "/<path:testrun>/notes", methods=["POST"], defaults={"filename": "notes"})
+@app.route(
+    "/<path:testrun>/exit-status", methods=["POST"],
+    defaults={"filename": "exit-status"})
 def update_file(testrun, filename):
     d = testrun_directory(testrun)
     manual_text = request.form["value"].encode('utf-8', errors="ignore").strip()
