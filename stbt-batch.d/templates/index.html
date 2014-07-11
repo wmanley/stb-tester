@@ -271,7 +271,7 @@
         function(index, element) {
           var timestamp = element.cells.item(0).textContent;
           var test_name = element.cells.item(1).textContent;
-          var hms = element.cells.item(5).textContent.split(':');
+          var hms = element.cells.item(3).textContent.split(':');
           var duration_sec = hms[0]*3600 + hms[1]*60 + hms[2]*1;
           var seriesIndex;
           if ($(element).hasClass('success')) {
