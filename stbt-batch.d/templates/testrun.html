@@ -41,7 +41,7 @@
 <p><b>Duration:</b> {{run.duration_hh_mm_ss()}}
 <p><b>Exit status:</b>
 {% if run.exit_status is defined %}
-  {{run.exit_status}}
+  <span id="exit-status">{{run.exit_status}}</span>
 
   {% if run.exit_status > 0 %}
     <p><b>Failure reason:</b></p>
