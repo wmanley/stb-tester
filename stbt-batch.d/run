@@ -140,8 +140,8 @@ run() {
   [[ -f screenshot.png ]] || "$runner"/../stbt-screenshot &>/dev/null
   echo $exit_status > exit-status
 
-  cat <<-EOF | python &&
-		import cv2
+  cat <<-EOF | PYTHONPATH="$runner"/..:"$PYTHONPATH" python &&
+		from stbt import cv2
 		im = cv2.imread('screenshot.png')
 		if im is not None:
 		    cv2.imwrite(
