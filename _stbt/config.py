@@ -76,12 +76,8 @@ def _config_init(force=False):
         config = ConfigParser.SafeConfigParser()
         config.readfp(
             open(os.path.join(os.path.dirname(__file__), '..', 'stbt.conf')))
-        try:
-            # Host-wide config, e.g. /etc/stbt/stbt.conf (see `Makefile`).
-            system_config = config.get('global', '__system_config')
-        except ConfigParser.NoOptionError:
-            # Running `stbt` from source (not installed) location.
-            system_config = ''
+        # Host-wide config, e.g. /etc/stbt/stbt.conf (see `Makefile`).
+        system_config = config.get('global', '__system_config')
         config.read([
             system_config,
             # User config: ~/.config/stbt/stbt.conf, as per freedesktop's base
