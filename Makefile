@@ -57,7 +57,7 @@ ESCAPED_VERSION=$(subst -,_,$(VERSION))
 .DELETE_ON_ERROR:
 
 
-all: stbt.sh stbt.1 defaults.conf extra/fedora/stb-tester.spec
+all: stbt.sh stbt.1 extra/fedora/stb-tester.spec
 
 extra/debian/changelog extra/fedora/stb-tester.spec stbt.sh : % : %.in .stbt-prefix VERSION
 	sed -e 's,@VERSION@,$(VERSION),g' \
@@ -69,13 +69,8 @@ extra/debian/changelog extra/fedora/stb-tester.spec stbt.sh : % : %.in .stbt-pre
 	    -e 's,@USER_EMAIL@,$(user_email),g' \
 	     $< > $@
 
-defaults.conf: stbt.conf .stbt-prefix
-	perl -lpe \
-	    '/\[global\]/ && ($$_ .= "\n__system_config=$(sysconfdir)/stbt/stbt.conf")' \
-	    $< > $@
-
 install : install-core
-install-core : stbt.sh stbt.1 defaults.conf
+install-core : stbt.sh stbt.1
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
 	    $(DESTDIR)$(libexecdir)/stbt \
@@ -101,7 +96,8 @@ install-core : stbt.sh stbt.1 defaults.conf
 	    _stbt/utils.py \
 	    $(DESTDIR)$(libexecdir)/stbt/_stbt
 	$(INSTALL) -m 0644 stbt/__init__.py $(DESTDIR)$(libexecdir)/stbt/stbt
-	$(INSTALL) -m 0644 defaults.conf $(DESTDIR)$(libexecdir)/stbt/stbt.conf
+	sed 's,@SYSCONFDIR@,$(sysconfdir),g' stbt.conf \
+	    >$(DESTDIR)$(libexecdir)/stbt/stbt.conf
 	$(INSTALL) -m 0755 \
 	    stbt-batch.d/run \
 	    stbt-batch.d/report \
@@ -117,7 +113,7 @@ install-core : stbt.sh stbt.1 defaults.conf
 	    stbt-batch.d/templates/testrun.html \
 	    $(DESTDIR)$(libexecdir)/stbt/stbt-batch.d/templates
 	$(INSTALL) -m 0644 stbt.1 $(DESTDIR)$(man1dir)
-	$(INSTALL) -m 0644 stbt.conf $(DESTDIR)$(sysconfdir)/stbt
+	$(INSTALL) -m 0644 desktop.conf $(DESTDIR)$(sysconfdir)/stbt/stbt.conf
 	$(INSTALL) -m 0644 stbt-completion \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
 
@@ -144,7 +140,7 @@ README.rst: api-doc.sh stbt/__init__.py _stbt/config.py
 	STBT_CONFIG_FILE=stbt.conf ./api-doc.sh $@
 
 clean:
-	rm -f stbt.1 stbt.sh defaults.conf .stbt-prefix \
+	rm -f stbt.1 stbt.sh .stbt-prefix \
 	      stbt-camera.d/gst/stbt-gst-plugins.so
 
 PYTHON_FILES = $(shell (git ls-files '*.py' && \
