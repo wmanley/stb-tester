@@ -12,6 +12,7 @@ from __future__ import unicode_literals
 import collections
 import glob
 import itertools
+import json
 import os
 import re
 import sys
@@ -149,14 +150,26 @@ def read_run_dir(rundir):
     assert t, "Invalid rundir '%s'" % rundir
     data['timestamp'] = datetime.strptime(t.group(), "%Y-%m-%d_%H.%M.%S")
 
-    return data
+    try:
+        with open('%s/stbt-run.json' % rundir, 'r') as stbt_run_json:
+            stbt_run = json.load(stbt_run_json)
+    except IOError:
+        stbt_run = {}
+
+    return dict(data.items() + stbt_run.items())
 
 
 class Run(object):
     def __init__(self, data):
-        for k, v in data.iteritems():
-            setattr(self, k, v)
         self.data = data
+        self.data['css_class'] = self.css_class()
+        self.data['logfiles'] = self.logfiles()
+        self.data['images'] = self.images()
+        self.data['duration_hh_mm_ss'] = self.duration_hh_mm_ss()
+        self.data['video'] = self.video()
+
+    def __getattr__(self, name):
+        return self.data.get(name, '')
 
     def css_class(self):
         return {None: "muted",   # White
