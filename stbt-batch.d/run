@@ -118,7 +118,9 @@ run() {
   user_command pre_run start
 
   [ $verbose -gt 0 ] && printf "\n$test $*...\n" || printf "$test $*... "
-  "$runner"/../stbt-run $v --save-video "video.webm" "$testpath" -- "$@" \
+  "$runner"/../stbt-run $v --save-video "video.webm" \
+                           --write-json stbt-run.json \
+                           "$testpath" -- "$@" \
     >"$tmpdir"/rawout 2>"$tmpdir"/rawerr &
   stbtpid=$!
   local start_time=$(date +%s)

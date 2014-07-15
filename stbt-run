@@ -20,6 +20,8 @@ parser.add_argument(
     '--save-video', help='Record video to the specified file', metavar='FILE',
     default=stbt.get_config('run', 'save_video'))
 parser.add_argument(
+    '--write-json', help='Write information about this test run to this file')
+parser.add_argument(
     'script', help='The test script to run', metavar='SCRIPT')
 parser.add_argument(
     'args', nargs=argparse.REMAINDER, metavar='ARG',
@@ -30,7 +32,121 @@ sys.argv[1:] = args.args
 stbt.debug("Arguments:\n" + "\n".join([
     "%s: %s" % (k, v) for k, v in args.__dict__.items()]))
 
+
+def iso_8601_now():
+    """Don't want to import datetime into the parent namespace as it may
+    conflict with test scripts
+    """
+    import datetime
+    return datetime.datetime.now().isoformat()
+
+
+def parse_stat(stat):
+    """
+    >>> parse_stat("29518 (cat) R 7921 29518 7921 34817 29518")
+    { 'pid': 29518, 'comm': 'cat', 'state': 'R', 'ppid': 7921, 'pgrp': 29518,
+      'session': 7921, 'tty_nr': 34817, 'tpgid': 29518}
+    """
+    import re
+    # from proc(5):
+    stat_fields = [
+        'pid',
+        'comm',
+        'state',
+        'ppid',
+        'pgrp',
+        'session',
+        'tty_nr',
+        'tpgid',
+        'flags',
+        'minflt',
+        'cminflt',
+        'majflt',
+        'cmajflt',
+        'utime',
+        'stime',
+        'cutime',
+        'cstime',
+        'priority',
+        'nice',
+        'num_threads',
+        'itrealvalue',
+        'starttime',
+        'vsize',
+        'rss',
+        'rsslim',
+        'startcode',
+        'endcode',
+        'startstack',
+        'kstkesp',
+        'kstkeip',
+        'signal',
+        'blocked',
+        'sigignore',
+        'sigcatch',
+        'wchan',
+        'nswap',
+        'cnswap',
+        'exit_signal',
+        'processor',
+        'rt_priority',
+        'policy',
+        'delayacct_blkio_ticks',
+        'guest_time',
+        'cguest_time']
+    pid, comm, state, post = re.split(r' \((.*)\) (\w) ', stat, 4)
+    return dict(zip(stat_fields,
+                    [int(pid), comm, state] + [int(x) for x in post.split()]))
+
+
+def read_stat():
+    with open('/proc/self/stat', 'r') as stat:
+        return parse_stat(stat.read())
+
+
+def read_git_info(script_dir):
+    import subprocess
+    try:
+        def gexe(cmd):
+            cmd = ['git'] + (['-C', script_dir] if script_dir else []) + cmd
+            return subprocess.check_output(cmd).strip()
+        git = {}
+        git['toplevel'] = gexe(['rev-parse', '--show-toplevel'])
+        git['branch'] = gexe(['symbolic-ref', 'HEAD'])
+        git['commit_sha'] = gexe(['rev-parse', 'HEAD'])
+        git['commit_date'] = gexe(['log', '-1', '--format=format:%ci'])
+        git['description'] = gexe(['describe', '--always'])
+        return git
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
+
+stbt_run = {
+    'pid': os.getpid(),
+    'run_argv': sys.argv,
+    'cwd': os.getcwd(),
+    'script': args.script,
+    'args': args.args,
+    'stbt_version': stbt.get_version(),
+    'python_path': sys.path,
+    'python_version': tuple(sys.version_info),
+    'start_time': iso_8601_now(),
+    'environ': dict(os.environ),
+    'stat_start': read_stat(),
+    'git': read_git_info(os.path.dirname(args.script)),
+}
+
+
+def write_info():
+    if args.write_json is not None:
+        import json
+        # pylint: disable=W0212
+        with open(args.write_json, 'w') as f:
+            json.dump({'stbt_run': stbt_run}, f, indent=4, sort_keys=True)
+
+
 try:
+    write_info()
     stbt.init_run(
         args.source_pipeline, args.sink_pipeline, args.control,
         args.save_video, args.restart_source,
@@ -47,15 +163,33 @@ try:
     __file__ = args.script
     sys.path.insert(0, os.path.dirname(os.path.abspath(args.script)))
     execfile(args.script)
+    stbt_run['exit_status'] = 0
 except Exception as e:  # pylint: disable=W0703
     sys.stdout.write("FAIL: %s: %s: %s\n" % (args.script, type(e).__name__, e))
     if hasattr(e, "screenshot") and e.screenshot is not None:
         stbt.save_frame(e.screenshot, "screenshot.png")
         sys.stderr.write("Saved screenshot to '%s'.\n" % ("screenshot.png"))
     traceback.print_exc(file=sys.stderr)
+
+    frames = traceback.extract_tb(sys.exc_info()[2])
+    frame_list = [dict(zip(["filename", "line_number", "function_name", "text"],
+                           frame))
+                  for frame in frames]
+    stbt_run['backtrace'] = frame_list
+    stbt_run['exception'] = {
+        'name': type(e).__name__,
+        'args': e.args,
+        'message': e.message
+    }
+
     if isinstance(e, stbt.UITestFailure):
+        stbt_run['exit_status'] = 1
         sys.exit(1)  # Failure
     else:
+        stbt_run['exit_status'] = 2
         sys.exit(2)  # Error
 finally:
+    stbt_run['stat_end'] = read_stat()
+    stbt_run['end_time'] = iso_8601_now()
+    write_info()
     stbt.teardown_run()
