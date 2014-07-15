@@ -2402,6 +2402,12 @@ def _load_mask(mask):
     return mask_image
 
 
+def get_version():
+    """Returns the version of stbt in use"""
+    with open(os.path.dirname(__file__) + '/../VERSION', 'r') as version:
+        return version.read().strip()
+
+
 # Tests
 # ===========================================================================
 
