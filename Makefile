@@ -111,7 +111,7 @@ install: install-stbt-common install-virtual-stb stbt.1
 	$(INSTALL) -m 0644 stbt-completion \
 	    $(DESTDIR)$(sysconfdir)/bash_completion.d/stbt
 
-install-stbt-common: stbt.sh
+install-stbt-common: stbt.sh VERSION
 	$(INSTALL) -m 0755 -d \
 	    $(DESTDIR)$(bindir) \
 	    $(DESTDIR)$(libexecdir)/stbt \
@@ -125,6 +125,7 @@ install-stbt-common: stbt.sh
 	    _stbt/utils.py \
 	    $(DESTDIR)$(libexecdir)/stbt/_stbt
 	$(INSTALL) -m 0755 stbt.sh $(DESTDIR)$(bindir)/stbt
+	$(INSTALL) -m 0644 VERSION $(DESTDIR)$(libexecdir)/stbt
 	sed 's,@SYSCONFDIR@,$(sysconfdir),g' stbt.conf \
 	    >$(DESTDIR)$(libexecdir)/stbt/stbt.conf
 

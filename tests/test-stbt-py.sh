@@ -408,3 +408,11 @@ test_that_transformation_pipeline_transforms_video() {
 	EOF
     ! stbt run -v test.py || fail "Test invalid, shouldn't have matched"
 }
+
+test_that_stbt_get_version_returns_correct_version() {
+    cat >test.py <<-EOF
+	open('VERSION', 'w').write(stbt.get_version())
+	EOF
+    stbt run test.py &&
+    [ "$(<VERSION)" == "$(<$srcdir/VERSION)" ] || fail "stbt version incorrect"
+}
