@@ -107,3 +107,69 @@ test_that_stbt_run_exits_on_ctrl_c() {
         *) fail "Unexpected return code $exit_status";;
     esac
 }
+
+test_that_stbt_run_writes_a_json_file_if_asked() {
+    touch test.py
+    stbt run --write-json stbt-run.json test.py argument &
+    PID=$!
+    wait $PID
+    cat <<-EOF | python || fail "JSON file written incorrectly"
+	import json
+	import sys
+	data = json.load(open('stbt-run.json', 'r'))
+	assert data['stbt_run']['stat_start']['pid'] == $PID
+	assert data['stbt_run']['stat_end']['pid'] == $PID
+	assert data['stbt_run']['environ']['testdir'] == "$testdir"
+	assert data['stbt_run']['python_version'] == list(sys.version_info)
+	assert data['stbt_run']['script'] == 'test.py'
+	assert data['stbt_run']['args'] == ['argument']
+	assert data['stbt_run']['exit_status'] == 0
+	EOF
+}
+
+test_that_stbt_run_writes_a_json_file_with_exception_information() {
+    cat >test.py <<-EOF
+	def test():
+	    assert False, 'hello'
+
+	test()
+	EOF
+    stbt run --write-json stbt-run.json test.py argument &
+    PID=$!
+    wait $PID
+    cat <<-EOF | python || fail "JSON file written incorrectly"
+	import json
+	import sys
+	data = json.load(open('stbt-run.json', 'r'))
+	assert data['stbt_run']['stat_start']['pid'] == $PID
+	assert data['stbt_run']['stat_end']['pid'] == $PID
+	assert data['stbt_run']['environ']['testdir'] == "$testdir"
+
+	assert data['stbt_run']['exit_status'] == 2
+	assert data['stbt_run']['exception']['args'] == ['hello']
+	assert data['stbt_run']['exception']['message'] == 'hello'
+	assert data['stbt_run']['exception']['name'] == 'AssertionError'
+	print data['stbt_run']['backtrace'][-1]
+	assert data['stbt_run']['backtrace'][-1] == {
+	    "filename": "test.py",
+	    "line_number": 2,
+	    "function_name": "test",
+	    "text": "assert False, 'hello'"}
+	EOF
+}
+
+test_that_stbt_run_writes_git_info_if_available() {
+    touch test.py
+    git init
+    git config user.name "Example Example"
+    git config user.email "example@example.com"
+    git add test.py
+    git commit -m "test"
+    stbt run --write-json stbt-run.json test.py argument
+
+    cat <<-EOF | python || fail "JSON file written incorrectly"
+	import json
+	data = json.load(open('stbt-run.json', 'r'))
+	assert data['stbt_run']['git']['toplevel'] == "$PWD"
+	EOF
+}
