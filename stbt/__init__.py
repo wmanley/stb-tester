@@ -122,6 +122,7 @@ def press(key, interpress_delay_secs=None):
     _control.press(key)
     press.time_of_last_press = datetime.datetime.now()
     draw_text(key, duration_secs=3)
+    return True
 
 
 def draw_text(text, duration_secs=3):
