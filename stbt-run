@@ -117,7 +117,8 @@ def read_git_info(script_dir):
         git['commit_date'] = gexe(['log', '-1', '--format=format:%ci'])
         git['description'] = gexe(['describe', '--always'])
         return git
-    except (OSError, subprocess.CalledProcessError):
+    except (OSError, subprocess.CalledProcessError) as e:
+        sys.stderr.write("Cannot load git information: '%s'\n" % e.message)
         return None
 
 
