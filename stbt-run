@@ -100,8 +100,11 @@ def parse_stat(stat):
 
 
 def read_stat():
-    with open('/proc/self/stat', 'r') as stat:
-        return parse_stat(stat.read())
+    try:
+        with open('/proc/self/stat', 'r') as stat:
+            return parse_stat(stat.read())
+    except IOError:
+        return None
 
 
 def read_git_info(script_dir):
