@@ -150,13 +150,15 @@ def read_run_dir(rundir):
     assert t, "Invalid rundir '%s'" % rundir
     data['timestamp'] = datetime.strptime(t.group(), "%Y-%m-%d_%H.%M.%S")
 
-    try:
-        with open('%s/stbt-run.json' % rundir, 'r') as stbt_run_json:
-            stbt_run = json.load(stbt_run_json)
-    except IOError:
-        stbt_run = {}
+    def load_json(name):
+        try:
+            with open('%s/%s' % (rundir, name), 'r') as stbt_run_json:
+                return json.load(stbt_run_json)
+        except IOError:
+            return {}
 
-    return dict(data.items() + stbt_run.items())
+    return dict(data.items() + load_json('stbt-run.json').items()
+                + load_json('classify.json').items())
 
 
 class Run(object):
