@@ -732,6 +732,8 @@ def wait_for_match(image, timeout_secs=10, consecutive_matches=1,
     the documentation for `MatchParameters` for details.
     """
 
+    __tracebackhide__ = True  # pytest
+
     if match_parameters is None:
         match_parameters = MatchParameters()
 
@@ -789,6 +791,9 @@ def press_until_match(
       Customise the image matching algorithm. See the documentation for
       `MatchParameters` for details.
     """
+
+    __tracebackhide__ = True  # pytest
+
     if interval_secs is None:
         # Should this be float?
         interval_secs = get_config(
@@ -853,6 +858,8 @@ def wait_for_motion(
       to search for motion. White pixels select the area to search; black
       pixels the area to ignore.
     """
+
+    __tracebackhide__ = True  # pytest
 
     if consecutive_frames is None:
         consecutive_frames = get_config('motion', 'consecutive_frames')
