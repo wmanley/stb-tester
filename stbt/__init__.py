@@ -475,6 +475,9 @@ class MatchResult(object):
                 self.image if isinstance(self.image, numpy.ndarray)
                 else "<Custom Image>"))
 
+    def __repr__(self):
+        return self.__str__()
+
     @property
     def position(self):
         return Position(self.region.x, self.region.y)
