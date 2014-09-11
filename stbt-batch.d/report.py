@@ -18,6 +18,7 @@ import re
 import sys
 from datetime import datetime
 from os.path import abspath, basename, dirname, isdir
+from StringIO import StringIO
 
 import jinja2
 import yaml
@@ -200,6 +201,26 @@ class Run(object):
             return 'video.webm'
         else:
             return None
+
+    def backtrace(self):
+        log = self.data['rundir'] + '/stderr.log'
+        if os.path.exists(log):
+            out = StringIO()
+            found_traceback = False
+            for line in open(log):
+                line = line[len("[2014-09-11 01:41:44.919933 +0100]  "):]
+                if re.search(r"^Traceback \(most recent call last\)", line):
+                    found_traceback = True
+                elif found_traceback and re.search(r"^\S", line):
+                    # but do print this last line (it contains the exception).
+                    found_traceback = False
+                    out.write(line)
+                if found_traceback:
+                    out.write(line)
+            traceback = out.getvalue()
+            if traceback:
+                return traceback
+        return None
 
 
 def die(message):
