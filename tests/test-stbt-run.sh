@@ -161,8 +161,10 @@ test_that_stbt_run_writes_a_json_file_with_exception_information() {
 test_that_stbt_run_writes_git_info_if_available() {
     touch test.py
     git init
+    git config user.name "Example Example"
+    git config user.email "example@example.com"
     git add test.py
-    git commit -m "test" --author="Example Example <example@example.com>"
+    git commit -m "test"
     stbt run --write-json stbt-run.json test.py argument
 
     cat <<-EOF | python || fail "JSON file written incorrectly"
