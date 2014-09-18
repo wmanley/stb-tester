@@ -1213,6 +1213,9 @@ class TextMatchResult(namedtuple(
                               self.frame.shape[2]),
                 repr(self.text)))
 
+    def __repr__(self):
+        return self.__str__()
+
 
 def match_text(text, frame=None, region=Region.ALL,
                mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD, lang=None,
