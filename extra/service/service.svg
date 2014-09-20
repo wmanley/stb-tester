@@ -13,7 +13,7 @@
    height="428.82599"
    id="svg2"
    version="1.1"
-   inkscape:version="0.48.5 r10040"
+   inkscape:version="0.48.4 r9939"
    sodipodi:docname="service.svg">
   <sodipodi:namedview
      id="base"
@@ -26,12 +26,12 @@
      inkscape:cx="350.44902"
      inkscape:cy="220.30977"
      inkscape:document-units="px"
-     inkscape:current-layer="layer2"
+     inkscape:current-layer="layer1"
      showgrid="false"
-     inkscape:window-width="1718"
-     inkscape:window-height="882"
-     inkscape:window-x="2"
-     inkscape:window-y="92"
+     inkscape:window-width="1280"
+     inkscape:window-height="1535"
+     inkscape:window-x="1280"
+     inkscape:window-y="30"
      inkscape:window-maximized="0"
      fit-margin-top="5"
      fit-margin-left="5"
@@ -257,6 +257,13 @@
      inkscape:groupmode="layer"
      inkscape:label="Layer 1"
      transform="translate(-21.043808,-248.50504)">
+    <path
+       inkscape:connector-curvature="0"
+       inkscape:connector-type="polyline"
+       id="path3137"
+       d="M 582.65787,379.58927 454.80334,411.66638"
+       style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow1Mend)"
+       sodipodi:nodetypes="cc" />
     <g
        transform="translate(247.28538,4.0406103)"
        id="g3964">
@@ -570,7 +577,7 @@
        inkscape:connector-curvature="0"
        inkscape:connector-type="polyline"
        id="path4067"
-       d="m 442.70736,459.53986 152.04649,64.13872"
+       d="m 460.68371,457.1491 140.18616,66.52948"
        style="fill:none;stroke:#55ddff;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow1Mend0);display:inline" />
     <path
        inkscape:connector-curvature="0"
@@ -585,14 +592,10 @@
        d="m 511.42285,561.54007 53.71968,0"
        style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow1Mend)" />
     <path
-       inkscape:connection-end-point="d4"
-       inkscape:connection-end="#g4011"
-       inkscape:connection-start-point="d4"
-       inkscape:connection-start="#g4071"
        inkscape:connector-curvature="0"
        inkscape:connector-type="polyline"
        id="path5473"
-       d="m 409.37076,459.53986 0,64.13872"
+       d="m 407.61524,459.93361 -0.44887,63.74497"
        style="fill:none;stroke:#55ddff;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow1Mendq)"
        sodipodi:nodetypes="cc" />
     <text
@@ -717,16 +720,6 @@
          y="528.79077">control</tspan></text>
     <path
        style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow1Mend)"
-       d="M 578.46918,378.40858 458.99202,414.67693"
-       id="path6586"
-       inkscape:connector-type="polyline"
-       inkscape:connector-curvature="0"
-       inkscape:connection-start="#g3964"
-       inkscape:connection-start-point="d4"
-       inkscape:connection-end="#g4071"
-       inkscape:connection-end-point="d4" />
-    <path
-       style="fill:none;stroke:#000000;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow1Mend)"
        d="M 582.65787,425.58927 454.80334,381.95209"
        id="path6588"
        inkscape:connector-type="polyline"
@@ -844,17 +837,6 @@
        id="path5862"
        d="m 562.99102,394.67386 c -5.82544,-1.75994 -3.84803,8.88979 -2.59375,10.6875 4.36222,-0.30444 11.1868,1.85347 9,-5 0.50835,-4.49277 -1.6039,-6.3418 -6.40625,-5.6875 z"
        style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Mono;-inkscape-font-specification:Mono" />
-    <text
-       xml:space="preserve"
-       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Monospace;-inkscape-font-specification:Monospace"
-       x="517.43744"
-       y="403.35748"
-       id="text5691"
-       sodipodi:linespacing="125%"><tspan
-         sodipodi:role="line"
-         id="tspan5693"
-         x="517.43744"
-         y="403.35748">--volumes-from</tspan></text>
     <path
        style="fill:#55ddff;stroke:#55ddff;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-end:url(#Arrow1Mendy)"
        d="m 130.46916,462.60637 0,52.79327"
@@ -959,5 +941,16 @@
          x="408.31979"
          id="tspan8476"
          sodipodi:role="line">test-pack sources</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:12px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Monospace;-inkscape-font-specification:Monospace"
+       x="521.43744"
+       y="403.35748"
+       id="text5691"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan5693"
+         x="521.43744"
+         y="403.35748">--volumes-from</tspan></text>
   </g>
 </svg>

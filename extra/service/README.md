@@ -113,7 +113,7 @@ The stb-tester service is deployed as a set of docker containers.  The
 stbt-ssh-service is additionally responsible for creating and running other
 docker containers.
 
-![Architectural overview](service.svg)
+![Architectural overview](service.png)
 
 <table>
   <tr>
