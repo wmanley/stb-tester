@@ -514,3 +514,15 @@ test_that_matchtimeout_screenshot_doesnt_include_visualisation() {
     stbt templatematch screenshot.png "$testdir"/black-full-frame.png \
         match_method=ccoeff-normed
 }
+
+test_that_matchresult_has_path_to_template_image() {
+    cat > test.py <<-EOF &&
+	import cv2, re
+	m1 = wait_for_match("$testdir/videotestsrc-redblue.png")
+	assert re.search("videotestsrc-redblue.png", str(m1))
+	m2 = wait_for_match(cv2.imread("$testdir/videotestsrc-redblue.png"))
+	assert re.search("<Custom Image>", str(m2))
+	EOF
+
+    stbt run -v test.py
+}
