@@ -78,7 +78,9 @@ _stbt_batch() {
                 -W "$(_stbt_trailing_space --help run report instaweb)" \
                 -- "$cur"));;
         3,run) COMPREPLY=($(compgen -W "-h" -f -- "$cur"));;
-        *,run) COMPREPLY=($(compgen -f -- "$cur"));;
+        *,run) COMPREPLY=($(compgen \
+                        -f -W "$(_stbt_functions_starting_with_test "$prev")" \
+                        -- "$cur"));;
         *,report) COMPREPLY=($(compgen -d -S "/" -- "$cur"));;
         3,instaweb) COMPREPLY=($(compgen \
                         -W "$(_stbt_trailing_space \
@@ -289,6 +291,13 @@ _stbt_power_outlet_outlet() {
                     1-A1 1-A2 1-A3 1-A4 1-A5 1-A6 1-A7 1-A8)" \
                 -- "$cur";;
     esac
+}
+
+_stbt_functions_starting_with_test() {
+    local pythonfile="$1"
+    if [[ -f "$pythonfile" ]]; then
+        awk -F'[ (]' '/^def test_/ { print $2 " -- " }' "$pythonfile"
+    fi
 }
 
 ## Helper functions
