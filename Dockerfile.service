@@ -13,44 +13,47 @@ RUN adduser --home /var/lib/stbt --uid 1000 --disabled-password --gecos "" \
         stb-tester && \
     echo "stb-tester    ALL=(ALL:ALL) NOPASSWD:ALL" >/etc/sudoers.d/stb-tester
 
-USER stb-tester
 WORKDIR /var/lib/stbt
 ENV HOME /var/lib/stbt
 VOLUME /var/lib/stbt
 
 # Runtime Dependencies:
-RUN sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 36A1D7869245C8950F966E92D8576A8BA88D21E9 && \
-    echo deb http://get.docker.io/ubuntu docker main | sudo tee /etc/apt/sources.list.d/docker.list && \
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 36A1D7869245C8950F966E92D8576A8BA88D21E9 && \
+    echo deb http://get.docker.io/ubuntu docker main | tee /etc/apt/sources.list.d/docker.list && \
     echo Update.... && \
-    sudo apt-get update && \
+    apt-get update && \
     echo Updated && \
-    sudo apt-get dist-upgrade -y && \
-    sudo apt-get install -y git lxc-docker-1.0.0 moreutils openssh-server && \
-    sudo adduser stb-tester docker && \
-    sudo apt-get clean
+    apt-get dist-upgrade -y && \
+    apt-get install -y \
+        git \
+        lxc-docker-1.0.0 \
+        moreutils \
+        openssh-server && \
+    adduser stb-tester docker && \
+    apt-get clean
 
 RUN export DEBIAN_FRONTEND=noninteractive && \
-    sudo apt-get install -y make python-docutils && \
-    sudo apt-get clean
+    apt-get install -y make python-docutils && \
+    apt-get clean
 
 ADD . /tmp/source
-RUN sudo make -C /tmp/source \
+RUN make -C /tmp/source \
         prefix=/usr sysconfdir=/etc libexecdir=/usr/lib/ \
         install-service && \
-    sudo rm -Rf /tmp/source
+    rm -Rf /tmp/source
 
 EXPOSE 22
 
 ENV XDG_RUNTIME_DIR /var/lib/stbt/.run
 
 CMD set -x && \
-    /usr/lib/stbt/extra/service/commands/reload-users && \
-    mkdir -p .run && \
+    sudo -u stb-tester /usr/lib/stbt/extra/service/commands/reload-users && \
+    sudo -u stb-tester mkdir -p .run && \
     docker_group=$(stat -c %G /run/docker.sock) && \
     if [ "$docker_group" = UNKNOWN ]; then \
-        sudo addgroup --quiet --system --gid $(stat -c %g /run/docker.sock) host-docker && \
+        addgroup --quiet --system --gid $(stat -c %g /run/docker.sock) host-docker && \
         docker_group=host-docker; \
     fi && \
-    sudo adduser --quiet stb-tester $docker_group && \
-    sudo mkdir /var/run/sshd && \
-    exec sudo /usr/sbin/sshd -D
+    adduser --quiet stb-tester $docker_group && \
+    mkdir /var/run/sshd && \
+    exec /usr/sbin/sshd -D
