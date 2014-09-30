@@ -2399,7 +2399,7 @@ def _log_ocr(frame, region, scaled, text):
 
     global _frame_number
     _frame_number += 1
-    d = os.path.join("stbt-debug/tesseract/%05d" % _frame_number)
+    d = os.path.join("stbt-debug/detect_match/%05d" % _frame_number)
     try:
         utils.mkdir_p(d)
     except OSError:
