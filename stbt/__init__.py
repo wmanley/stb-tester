@@ -1082,7 +1082,9 @@ def _tesseract(frame, region=Region.ALL,
         except subprocess.CalledProcessError as e:
             raise RuntimeError("%s. Output was: %s" % (e, e.output))
         with open(outdir + '/' + os.listdir(outdir)[0], 'r') as outfile:
-            return (outfile.read(), region)
+            text = outfile.read().strip()
+            _log_ocr(frame, region, subframe, text.decode('utf-8'))
+            return (text, region)
 
 
 def ocr(frame=None, region=Region.ALL,
@@ -2383,6 +2385,71 @@ def _log_image_descriptions(
                        "../%05d/index.html" % (_frame_number - 1)),
             next_page="../%05d/index.html" % (_frame_number + 1)
         ))
+
+
+def _log_ocr(frame, region, scaled, text):
+    if logging.get_debug_level() <= 1:
+        return
+    try:
+        import jinja2
+    except ImportError:
+        warn("Not generating html guide ocr because python 'jinja2' module is "
+             "not installed.")
+        return
+
+    global _frame_number
+    _frame_number += 1
+    d = os.path.join("stbt-debug/tesseract/%05d" % _frame_number)
+    try:
+        utils.mkdir_p(d)
+    except OSError:
+        warn("Failed to create directory '%s'; won't save debug images." % d)
+        return
+    for name, image in (('frame', frame), ('scaled', scaled)):
+        if image.dtype == numpy.float32:
+            image = cv2.convertScaleAbs(image, alpha=255)
+        cv2.imwrite(os.path.join(d, name) + ".png", image)
+
+    template = jinja2.Template(u"""
+        <!DOCTYPE html>
+        <html lang='en'>
+        <head>
+        <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+        <style>
+            p, li { line-height: 40px; }
+            div.ocr_region { outline: 2px solid #8080FF }
+        </style>
+        </head>
+        <body>
+        <div class="container">
+        {% if prev_page %}
+          <a href="{{ prev_page }}">prev</a>
+        {% endif %}
+        <a href="{{ next_page }}">next</a>
+        <h4>
+            OCR: "<i>{{text | escape}}</i>"
+        </h4>
+
+        <div class="annotated_image" style="position: relative">
+            <img src="frame.png" />
+            <div class="ocr_region" style="position: absolute; left: {{region.x / image.width * 100}}%; top: {{region.y / image.height * 100}}%; width: {{region.width / image.width * 100}}%; height: {{region.height / image.height * 100}}%"></div>
+        </div>
+
+        <p>ROI Scaled:</p>
+        <img src="scaled.png" />
+
+        </div>
+        </body>
+        </html>
+    """)
+
+    with open(os.path.join(d, "index.html"), "w") as f:
+        f.write(template.render(
+            prev_page=(_frame_number > 0 and
+                       "../%05d/index.html" % (_frame_number - 1)),
+            next_page="../%05d/index.html" % (_frame_number + 1),
+            text=text, region=region, image=_image_region(frame)
+        ).encode('utf-8'))
 
 
 def _find_path(image):
