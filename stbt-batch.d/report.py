@@ -41,6 +41,8 @@ def main(argv):
                 abspath(target))
             if match:
                 testrun(match.group())
+            else:
+                die("Invalid target '%s'" % target)
         elif target.endswith("index.html"):
             index(dirname(target))
         else:
