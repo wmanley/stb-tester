@@ -51,7 +51,7 @@
 
   {% if run.exit_status > 0 %}
     <p><b>Failure reason:</b></p>
-    <p id="failure-reason">{{run.failure_reason}}</p>
+    <p id="failure-reason">{{run.failure_reason|e}}</p>
   {% endif %}
 {% else %}
   still running
