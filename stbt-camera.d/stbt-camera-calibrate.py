@@ -338,11 +338,11 @@ def fit_fn(ideals, measureds):
     xs = [n * 255.0 / (POINTS + 1) for n in range(0, POINTS + 2)]
 
     def fn(x, ys):
-        return interp1d(xs, numpy.array([0] + ys + [0]))(x)
+        return interp1d(xs, numpy.array([0] + ys + [255]))(x)
 
     ys, _ = curve_fit(  # pylint:disable=W0632
         lambda x, *args: fn(x, list(args)), ideals, measureds, [0.0] * POINTS)
-    return interp1d(xs, numpy.array([0] + ys.tolist() + [0]))
+    return interp1d(xs, numpy.array([0] + ys.tolist() + [255]))
 
 
 @contextmanager
@@ -358,14 +358,15 @@ def colour_graph():
     pyplot.ion()
 
     ideals = [[], [], []]
+    measureds = [[], [], []]
     deltas = [[], [], []]
 
     pyplot.figure()
 
     def update():
         pyplot.cla()
-        pyplot.axis([0, 255, -128, 128])
-        pyplot.ylabel("Error (higher means too bright)")
+        pyplot.axis([0, 255, 0, 255])
+        pyplot.ylabel("Measured")
         pyplot.xlabel("Ideal colour")
         pyplot.grid()
 
@@ -375,11 +376,12 @@ def colour_graph():
             pyplot.draw()
             for c in [0, 1, 2]:
                 ideals[c].append(ideal[c])
+                measureds[c].append(measured[c])
                 delta[c] = measured[c] - ideal[c]
                 deltas[c].append(delta[c])
-            pyplot.plot([ideal[0]], [delta[0]], 'rx',
-                        [ideal[1]], [delta[1]], 'gx',
-                        [ideal[2]], [delta[2]], 'bx')
+            pyplot.plot([ideal[0]], [measured[0]], 'rx',
+                        [ideal[1]], [measured[1]], 'gx',
+                        [ideal[2]], [measured[2]], 'bx')
 
         fits = [fit_fn(ideals[n], deltas[n]) for n in [0, 1, 2]]
         pyplot.plot(range(0, 256), [fits[0](x) for x in range(0, 256)], 'r-',
