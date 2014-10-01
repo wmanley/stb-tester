@@ -186,7 +186,7 @@ class Run(object):
     def logfiles(self):
         return [f for f in self.data['files']
                 if f not in text_columns
-                and f not in ['exit-status', 'duration']
+                and f not in ['exit-status', 'duration', 'thumbnail.jpg']
                 and not f.endswith('.png')
                 and not f.endswith('.manual')
                 and not f.startswith('index.html')]
