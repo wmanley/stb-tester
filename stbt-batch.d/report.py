@@ -117,8 +117,9 @@ class TemplateFactory(object):
             .replace('@ROW@', row_template)
         return jinja2.Template(composite_template)
 
-text_columns = ["failure-reason", "git-commit", "notes", "test-args",
-                "test-name"]
+text_columns = [
+    "backtrace", "failure-reason", "git-commit", "notes", "test-args",
+    "test-name"]
 int_columns = ['exit-status', 'duration']
 
 

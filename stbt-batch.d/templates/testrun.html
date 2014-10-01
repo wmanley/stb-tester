@@ -11,6 +11,7 @@
     #failure-reason,
     .extra_columns,
     #notes { white-space: pre-wrap; }
+    #backtrace pre { white-space: pre; overflow-x: auto; }
     .thumbnail p { word-wrap: break-word; text-align: center; }
     .editable-click { border-bottom: none; }
     #delete,
@@ -27,9 +28,19 @@
 <div class="span4">
 
 <p><a id="permalink" href="">[Link to this result]</a>
+
 {% if run.video() %}
   <video src="{{run.video()}}" preload="none" poster="thumbnail.jpg" controls></video>
 {% endif %}
+
+{% if run.backtrace %}
+  <div id="backtrace"><pre>
+    {{- run.failure_reason|e }}
+
+    {{ run.backtrace|e -}}
+  </pre></div>
+{% endif %}
+
 <p><b>Timestamp:</b> {{run.timestamp}}
 
 <p><b>Test:</b> {{run.test_name}} @{{run.git_commit}}
