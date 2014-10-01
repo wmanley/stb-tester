@@ -8,7 +8,6 @@
   <link href="http://cdnjs.cloudflare.com/ajax/libs/x-editable/1.4.6/bootstrap-editable/css/bootstrap-editable.css" rel="stylesheet"/>
   <style>
     #args,
-    #backtrace,
     #failure-reason,
     .extra_columns,
     #notes { white-space: pre-wrap; }
@@ -31,11 +30,6 @@
 {% if run.video() %}
   <video src="{{run.video()}}" preload="none" poster="thumbnail.jpg" controls></video>
 {% endif %}
-
-{% if run.backtrace() %}
-  <p id="backtrace">{{run.backtrace()}}</p>
-{% endif %}
-
 <p><b>Timestamp:</b> {{run.timestamp}}
 
 <p><b>Test:</b> {{run.test_name}} @{{run.git_commit}}
