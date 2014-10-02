@@ -7,7 +7,6 @@
   <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
   <link href="http://cdn.jsdelivr.net/jqplot/1.0.8/jquery.jqplot.min.css" rel="stylesheet" />
   <style>
-    table.sortable th { cursor: pointer; }
     #details { position: fixed; }
     #plot { height: 250px; width: 100%; }
     .jqplot-highlighter-tooltip {
@@ -18,6 +17,12 @@
     #totals table {
       border-bottom: 1px solid #ddd; padding-bottom: 0; margin-bottom: 0; }
     #totals tr:not(:first-child), #totals + p { display: none; }
+
+    table.sortable th { cursor: pointer; }
+    #testruns { table-layout: fixed; width: 100%; }
+    #testruns th { word-wrap: break-word; }
+    #testruns td {
+      white-space: nowrap; overflow-x: hidden; text-overflow: ellipsis; }
 
     /* Border around selected row, opening up like a '{' onto right pane */
     table#testruns { border-collapse: separate; }
