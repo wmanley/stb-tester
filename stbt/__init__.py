@@ -1843,9 +1843,12 @@ class Display(object):
             sample = _gst_sample_make_writable(sample)
             with _numpy_from_sample(sample) as img:
                 for i in range(len(texts)):
-                    text, _, _ = texts[len(texts) - i - 1]
+                    text, duration, end_time = texts[len(texts) - i - 1]
+                    start_time = end_time - (duration * Gst.SECOND)
+                    percent_complete = (
+                        float(now - start_time) / (end_time - start_time))
                     origin = (10, (i + 1) * 30)
-                    _draw_text(img, text, origin)
+                    _draw_text(img, text, origin, percent_complete)
                 for match_result in matches:
                     _draw_match(img, match_result.region, match_result.match)
 
@@ -1943,7 +1946,7 @@ class Display(object):
                 "is still alive!" if self.mainloop_thread.isAlive() else "ok"))
 
 
-def _draw_text(numpy_image, text, origin):
+def _draw_text(numpy_image, text, origin, percent_complete):
     (width, height), _ = cv2.getTextSize(
         text, fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=1.0, thickness=1)
     cv2.rectangle(
@@ -1951,7 +1954,7 @@ def _draw_text(numpy_image, text, origin):
         thickness=cv2.cv.CV_FILLED, color=(0, 0, 0))
     cv2.putText(
         numpy_image, text, origin, cv2.FONT_HERSHEY_TRIPLEX, fontScale=1.0,
-        color=(255, 255, 255))
+        color=((int(255 * (1 - percent_complete)),) * 3))
 
 
 def _draw_match(numpy_image, region, match_, thickness=3):
