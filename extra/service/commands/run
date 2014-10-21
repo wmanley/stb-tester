@@ -66,15 +66,6 @@ def repo(url, revision):
 
         git(['reset', '--hard', rev])
 
-        os.environ['STBT_CONFIG_FILE'] = tmpdir + '/stbt.conf'
-
-        try:
-            shutil.copyfile("/etc/stbt/stbt.conf",
-                            os.environ['STBT_CONFIG_FILE'])
-        except IOError:
-            # touch:
-            open(os.environ['STBT_CONFIG_FILE'], 'w').close()
-
         try:
             yield test_pack
         finally:
@@ -104,27 +95,14 @@ def execute(test_pack_dir, image, command, extra_opts):
          '-v',
          '%s:/var/lib/stbt/test-pack:ro' %
          container_to_host_path(test_pack_dir),
+         '-v',
+         '%s:/etc/stbt/stbt.conf' %
+         container_to_host_path(os.environ['STBT_CONFIG_FILE']),
          '-v', '%s:/var/lib/stbt/results' % container_to_host_path('results')]
         + extra_opts + [image] + command)
     sys.stderr.write("Will run: %s\n" % str(docker_cmd))
 
     return check_call(docker_cmd)
-
-
-def _xdg_config_dir():
-    return os.environ.get('XDG_CONFIG_HOME', '%s/.config' % os.environ['HOME'])
-
-
-def _config_file_mount():
-    from os.path import exists
-    if exists(os.environ.get('STBT_CONFIG_FILE', '')):
-        return ['-v', '%s:/etc/stbt/stbt.conf:ro' %
-                container_to_host_path(os.environ['STBT_CONFIG_FILE'])]
-    elif exists('%s/stbt/stbt.conf' % _xdg_config_dir()):
-        return ['-v', '%s:/etc/stbt/stbt.conf:ro' %
-                container_to_host_path(_xdg_config_dir() + '/stbt/stbt.conf')]
-    else:
-        return []
 
 
 def main(argv):
@@ -165,17 +143,22 @@ def main(argv):
         mkdir_p('run')
         with named_temporary_directory(
                 prefix='%s/service-run-' % os.getcwd()) as tmp:
+            os.environ['STBT_CONFIG_FILE'] = tmp + '/stbt.conf'
+
+            try:
+                shutil.copyfile("/etc/stbt/stbt.conf",
+                                os.environ['STBT_CONFIG_FILE'])
+            except IOError:
+                # touch:
+                open(os.environ['STBT_CONFIG_FILE'], 'w').close()
+
             if args.with_virtual_stb:
-                os.environ['STBT_CONFIG_FILE'] = tmp + '/stbt.conf'
                 vstb_cmd_line = shlex.split(args.with_virtual_stb)
                 with virtual_stb(cmd=vstb_cmd_line[1:],
                                  docker_image=vstb_cmd_line[0],
                                  share_x=False) as vstb:
                     execute(test_pack_dir, image, args.command, [
-                        '--volumes-from=%s' % vstb[0],
-                        '-v',
-                        '%s:/etc/stbt/stbt.conf' %
-                        container_to_host_path(os.environ['STBT_CONFIG_FILE'])])
+                        '--volumes-from=%s' % vstb[0]])
             else:
                 # docker rm will fail if the container already exists or is
                 # running, but we only do it to remove stale (non-running)
@@ -193,7 +176,7 @@ def main(argv):
                     '--name=tests_using_hardware',
                     # Allow hardware access:
                     '--privileged=true',
-                    '-v', '/run/lirc/:/run/lirc/'] + _config_file_mount())
+                    '-v', '/run/lirc/:/run/lirc/'])
 
 
 if __name__ == '__main__':
