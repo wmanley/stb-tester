@@ -48,6 +48,10 @@ start_service()
 {
     rid="$(basename $scratchdir)"
 
+    if [ -e "$scratchdir/stbt.conf" ]; then
+        extra_args="-v $scratchdir/stbt.conf:/etc/stbt/stbt.conf:ro"
+    fi
+
     mkdir -p "$scratchdir/.ssh/"
     ssh-keygen -f "$scratchdir/.ssh/id_rsa" -N "" >/dev/null 2>&1
     eval $(ssh-agent -s) >/dev/null 2>&1
@@ -64,6 +68,7 @@ start_service()
         --volumes-from=stbt-service-credentials-$rid \
         --volumes-from=stbt-service-results-$rid \
         --name=stbt-service-$rid \
+        $extra_args \
         stbtester/stb-tester-service)" &&
     SERVICE_HOSTNAME=$(
         docker inspect --format '{{ .NetworkSettings.IPAddress }}' $SERVICE_CID)
@@ -289,4 +294,14 @@ test_running_test_pack_by_sha()
     || fail "Test error"
 
     [ "$sha" = "$remotesha" ] || fail "SHAs don't match"
+}
+
+test_that_config_from_host_ends_up_in_test_pack()
+{
+    printf '[global]\ntest=moo' >$scratchdir/stbt.conf &&
+    service_test_setup &&
+    global_test="$(ssh -T "stb-tester@$SERVICE_HOSTNAME" stbt-ssh-endpoint run \
+             --test-pack-url=$TEST_PACKS_GIT_URL/html5.git \
+             stbt config global.test)"
+    [ "$global_test" = "moo" ] || fail "Config is not preserved"
 }
