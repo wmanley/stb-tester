@@ -96,7 +96,7 @@ def execute(test_pack_dir, image, command, extra_opts):
          '%s:/var/lib/stbt/test-pack:ro' %
          container_to_host_path(test_pack_dir),
          '-v',
-         '%s:/etc/stbt/stbt.conf' %
+         '%s:/etc/stbt/stbt.conf:ro' %
          container_to_host_path(os.environ['STBT_CONFIG_FILE']),
          '-v', '%s:/var/lib/stbt/results' % container_to_host_path('results')]
         + extra_opts + [image] + command)

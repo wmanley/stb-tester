@@ -314,8 +314,8 @@ test_that_virtual_stb_ip_address_is_set_in_config()
 
     address="$(ssh -T "stb-tester@$SERVICE_HOSTNAME" stbt-ssh-endpoint run \
              --test-pack-url=$TEST_PACKS_GIT_URL/html5.git \
-             --with-virtual-stb=virtual-stb:test-service
-             mount 1>&2 && ls -l /etc/stbt 1>&2 && stbt config device_under_test.address)"
+             --with-virtual-stb=virtual-stb:test-service \
+             stbt config device_under_test.address)"
     echo
     echo ================================
     echo "$address"
