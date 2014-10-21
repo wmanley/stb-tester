@@ -67,8 +67,8 @@ def repo(url, revision):
         git(['reset', '--hard', rev])
 
         os.environ['STBT_CONFIG_FILE'] = tmpdir + '/stbt.conf'
-        # touch stbt.conf
-        open(tmpdir + '/stbt.conf', 'w').close()
+
+        shutil.copyfile("/etc/stbt/stbt.conf", os.environ['STBT_CONFIG_FILE'])
         try:
             yield test_pack
         finally:
