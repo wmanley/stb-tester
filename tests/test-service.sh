@@ -305,3 +305,24 @@ test_that_config_from_host_ends_up_in_test_pack()
              stbt config global.test)"
     [ "$global_test" = "moo" ] || fail "Config is not preserved"
 }
+
+test_that_virtual_stb_ip_address_is_set_in_config()
+{
+    service_test_setup &&
+
+    build_virtual_stb html5 virtual-stb:test-service &&
+
+    address="$(ssh -T "stb-tester@$SERVICE_HOSTNAME" stbt-ssh-endpoint run \
+             --test-pack-url=$TEST_PACKS_GIT_URL/html5.git \
+             --with-virtual-stb=virtual-stb:test-service
+             mount 1>&2 && ls -l /etc/stbt 1>&2 && stbt config device_under_test.address)"
+    echo
+    echo ================================
+    echo "$address"
+    echo ================================
+    echo
+    fail "IP Address '$address' is not correct"
+
+    [[ "$address" =~ [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+ ]] \
+        || fail "IP Address '$address' is not correct"
+}

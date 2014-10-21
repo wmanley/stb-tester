@@ -30,7 +30,7 @@ ADD extra/virtual-stb/key-mapping.conf /usr/lib/stbt/extra/virtual-stb/
 ADD extra/virtual-stb/virtual-stb-impl.py /usr/lib/stbt/extra/virtual-stb/
 ADD extra/virtual-stb/xorg.conf.jinja2 /usr/lib/stbt/extra/virtual-stb/
 
-RUN sudo mkdir -p /tmp/.X11-unix /run/lirc && \
+RUN sudo mkdir -p /tmp/.X11-unix /run/lirc /etc/stbt && \
     sudo chmod a+rwx /tmp/.X11-unix /run/lirc
 
 VOLUME /tmp/.X11-unix
