@@ -68,7 +68,13 @@ def repo(url, revision):
 
         os.environ['STBT_CONFIG_FILE'] = tmpdir + '/stbt.conf'
 
-        shutil.copyfile("/etc/stbt/stbt.conf", os.environ['STBT_CONFIG_FILE'])
+        try:
+            shutil.copyfile("/etc/stbt/stbt.conf",
+                            os.environ['STBT_CONFIG_FILE'])
+        except IOError:
+            # touch:
+            open(os.environ['STBT_CONFIG_FILE'], 'w').close()
+
         try:
             yield test_pack
         finally:
