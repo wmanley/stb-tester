@@ -181,11 +181,12 @@ def main(argv):
     with start_x(1280, 720, args.in_container) as display:
         os.environ['DISPLAY'] = display
         with fake_lircd() if args.with_lirc else noop_context():
+            ip_address = socket.gethostbyname(socket.gethostname())
             if args.with_lirc:
-                notify.sd_notify('X_LIRC_SOCKET=%s:8765' %
-                                 socket.gethostbyname(socket.gethostname()))
+                notify.sd_notify('X_LIRC_SOCKET=%s:8765' % ip_address)
                 notify.sd_notify('X_LIRC_REMOTE_NAME=vstb')
 
+            notify.sd_notify('X_HOST_ADDRESS=%s' % ip_address)
             child = subprocess.Popen(args.command + args.args)
             notify.sd_notify('X_DISPLAY=%s' % display)
             notify.sd_notify('READY=1')
