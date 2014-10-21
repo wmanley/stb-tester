@@ -63,5 +63,5 @@ def fake_lircd():
     finally:
         s.close()
 
-with fake_lircd() as t:
-    t.join()
+with fake_lircd() as lircd_thread:
+    lircd_thread.join()
