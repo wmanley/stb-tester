@@ -71,7 +71,7 @@ def virtual_stb(cmd, docker_image=None, share_x=True,
 
         if 'X_HOST_ADDRESS' in notify_data:
             set_config('device_under_test', 'address',
-                await_notification('X_HOST_ADDRESS'))
+                       await_notification('X_HOST_ADDRESS'))
 
         if docker_image is not None:
             docker_cid = open('%s-cid' % listener.socket_path, 'r').read()
