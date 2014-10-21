@@ -162,6 +162,18 @@ test_that_stdout_comes_purely_from_the_test_pack()
     diff -u <(echo "This is a test") output
 }
 
+test_that_stdout_comes_purely_from_the_test_pack_with_virtual_stb()
+{
+    service_test_setup &&
+
+    build_virtual_stb html5 virtual-stb:test-service &&
+    ssh -T "stb-tester@$SERVICE_HOSTNAME" stbt-ssh-endpoint run \
+        --with-virtual-stb=virtual-stb:test-service \
+        --test-pack-url=$TEST_PACKS_GIT_URL/videotestsrc.git \
+        echo "This is a test" >output &&
+    diff -u <(echo "This is a test") output
+}
+
 test_that_we_can_run_tests_from_the_same_repo_twice()
 {
     service_test_setup &&

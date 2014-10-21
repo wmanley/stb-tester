@@ -82,6 +82,6 @@ def virtual_stb(cmd, docker_image=None, share_x=True,
             yield (docker_cid, child, notify_data)
         finally:
             if docker_image:
-                subprocess.call(['docker', 'kill', docker_cid])
+                subprocess.check_output(['docker', 'kill', docker_cid])
             else:
                 os.kill(child.pid, signal.SIGTERM)
