@@ -328,12 +328,6 @@ test_that_virtual_stb_ip_address_is_set_in_config()
              --test-pack-url=$TEST_PACKS_GIT_URL/html5.git \
              --with-virtual-stb=virtual-stb:test-service \
              stbt config device_under_test.address)"
-    echo
-    echo ================================
-    echo "$address"
-    echo ================================
-    echo
-    fail "IP Address '$address' is not correct"
 
     [[ "$address" =~ [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+ ]] \
         || fail "IP Address '$address' is not correct"
