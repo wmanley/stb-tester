@@ -1,0 +1,60 @@
+#
+# Dockerfile for broadcasting video from a virtual-stb for embedding video in
+# a web page with the flash video player flowplayer.
+#
+# Usage:
+#
+#     stbt virtual-stb --docker-image=virtual-stb-stbt-demo
+#     docker run -p 1935:1935 --volumes-from=[virtual stb container id] \
+#         stb_tester/stb-tester-stream-source \
+#         $(stbt config global.source_pipeline)
+#
+
+FROM ubuntu:14.04
+MAINTAINER William Manley <will@stb-tester.com>
+
+ENV STREAM_NAME demo
+
+RUN export DEBIAN_FRONTEND=noninteractive && \
+    apt-get update && \
+    apt-get install -y \
+        crtmpserver \
+        gstreamer1.0-plugins-bad \
+        gstreamer1.0-plugins-good \
+        gstreamer1.0-plugins-ugly \
+        gstreamer1.0-tools \
+        gstreamer1.0-x \
+        python && \
+    apt-get clean
+
+RUN export DEBIAN_FRONTEND=noninteractive && \
+    apt-get update && \
+    apt-get install -y \
+        git \
+        libgstreamer1.0-dev \
+        libgstreamer-plugins-base1.0-dev \
+        valac && \
+    apt-get clean
+
+ADD extra/pulsevideo /usr/src/pulsevideo
+
+RUN cd /usr/src/pulsevideo && \
+    echo "0.stbt" >VERSION && \
+    make && \
+    make prefix=/usr install
+
+RUN export DEBIAN_FRONTEND=noninteractive && \
+    rm -Rf /usr/src/pulsevideo && \
+    apt-get remove -y \
+        git \
+        libgstreamer1.0-dev \
+        libgstreamer-plugins-base1.0-dev \
+        valac && \
+    apt-get autoremove -y && \
+    apt-get clean
+
+EXPOSE 1935
+EXPOSE 80
+
+ADD extra/stream-source /opt/stream-source
+ENTRYPOINT ["/opt/stream-source/stream-source.sh"]

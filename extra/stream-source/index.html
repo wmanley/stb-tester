@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Stream Source Demo</title>
+</head>
+
+<body>
+
+  <div id="player" style="width: 1280px; height: 720px">
+  </div>
+
+<!-- Javascript ------------------------------------------------------------->
+<script src="https://releases.flowplayer.org/js/flowplayer-3.2.12.min.js"></script>
+<script>
+flowplayer(
+  "player",
+  {
+    src: "https://releases.flowplayer.org/swf/flowplayer-3.2.16.swf",
+    wmode: "opaque",
+  },
+  {
+    clip: {
+      url: "ts_4_0_65",
+      provider: "rtmp",
+      live: true,
+      autoPlay: true,
+      bufferLength: 0,
+      scaling: 'fit',
+    },
+    plugins: {
+      rtmp: {
+        url: "https://releases.flowplayer.org/swf/flowplayer.rtmp-3.2.12.swf",
+        netConnectionUrl: "rtmp://" + window.location.hostname + "/flvplayback",
+      },
+    },
+  });
+</script>
+</body>
+</html>
