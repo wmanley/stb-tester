@@ -394,7 +394,34 @@ install-stbt-camera : $(stbt_camera_files)
 	$(INSTALL) -m 0644 stbt-camera.d/gst/stbt-gst-plugins.so \
 		$(DESTDIR)$(gstpluginsdir)
 
-.PHONY: all clean check deb dist doc install install-core install-stbt-camera uninstall
+# Docker images
+
+docker_images = \
+	stb-tester
+
+docker_prefix?=stbtester/
+docker_tag?=latest
+
+$(patsubst Dockerfile.%,docker-build-%,$(wildcard Dockerfile.*)) : docker-build-% : stb-tester-$(VERSION).tar.gz
+	tmpdir=$$(mktemp -d) && \
+	tar -C "$$tmpdir" -xzf $(abspath $<) && \
+	ln -sf Dockerfile.$* $$tmpdir/stb-tester-$(VERSION)/Dockerfile && \
+	find "$$tmpdir/stb-tester-$(VERSION)" -print0 | xargs -0 touch -cht 197001010000.00 && \
+	docker build -t $(docker_prefix)stb-tester-$*:$(VERSION) "$$tmpdir/stb-tester-$(VERSION)" && \
+	docker tag $(docker_prefix)stb-tester-$*:$(VERSION) $(docker_prefix)stb-tester-$*:$(docker_tag) && \
+	rm -rf "$$tmpdir" && \
+	printf "Run with:\n    docker run $(docker_prefix)stb-tester-$*:$(VERSION)\n" && \
+	printf " or with:\n    docker run $(docker_prefix)stb-tester-$*:$(docker_tag)\n"
+
+docker-build : $(patsubst %,docker-build-%,$(docker_images))
+docker-publish : docker-build
+	for image in $(patsubst %,$(docker_prefix)stb-tester-%:$(docker_tag),$(docker_images)) \
+	             $(patsubst %,$(docker_prefix)stb-tester-%:$(VERSION),$(docker_images)); \
+	do \
+	    docker push $$image; \
+	done
+
+.PHONY: all clean check deb dist doc docker-build install install-core install-stbt-camera uninstall
 .PHONY: check-bashcompletion check-hardware check-integrationtests
 .PHONY: check-nosetests check-pylint install-for-test
 .PHONY: copr-publish ppa-publish srpm
