@@ -394,7 +394,8 @@ install-stbt-camera : $(stbt_camera_files)
 
 docker_images = \
 	stb-tester \
-	stream-source
+	stream-source \
+	video-source
 
 docker_prefix?=stbtester/
 docker_tag?=latest
