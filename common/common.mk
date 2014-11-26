@@ -67,7 +67,7 @@ check-integrationtests: install-for-test
 	$(parallel) common/run-tests.sh -i
 check-pylint:
 	printf "%s\n" $(PYTHON_FILES) \
-	| PYTHONPATH=$(PWD) $(parallel) extra/pylint.sh
+	| PYTHONPATH=$(PWD) $(parallel) common/pylint.sh
 
 install-for-test:
 	rm -rf tests/test-install && \

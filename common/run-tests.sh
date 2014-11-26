@@ -24,7 +24,7 @@ shift $(($OPTIND-1))
 export srcdir="$(cd "$(dirname "$0")/.." && pwd)"
 export testdir="$srcdir/tests"
 export PYTHONUNBUFFERED=x
-export PYLINTRC="$srcdir/common/pylint.conf"
+export PYLINTRC="$srcdir/common/null-pylint.conf"
 
 testsuites=()
 testcases=()
