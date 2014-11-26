@@ -1,6 +1,6 @@
 #!/bin/sh
 
-. $testdir/utils.sh
+. $srcdir/common/utils.sh
 
 case $1 in
     start)

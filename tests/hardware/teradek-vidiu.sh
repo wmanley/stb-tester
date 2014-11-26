@@ -1,6 +1,6 @@
 #!/bin/sh
 
-. $testdir/utils.sh
+. $srcdir/common/utils.sh
 
 VIDIU_ADDRESS="vidiu-01188.local"
 STREAM_NAME=steam

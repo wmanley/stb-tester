@@ -48,7 +48,7 @@ if [[ "$test_installation" != "true" ]]; then
            GST_PLUGIN_PATH=$test_installation_prefix/lib/gstreamer-1.0/plugins:$$GST_PLUGIN_PATH
 fi
 
-. $testdir/utils.sh
+. $srcdir/common/utils.sh
 
 run() {
     scratchdir=$(mktemp -d -t stb-tester.XXX)
