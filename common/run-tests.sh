@@ -21,10 +21,10 @@ while getopts "lvi" option; do
 done
 shift $(($OPTIND-1))
 
-export testdir="$(cd "$(dirname "$0")" && pwd)"
-export srcdir="$testdir/.."
+export srcdir="$(cd "$(dirname "$0")/.." && pwd)"
+export testdir="$srcdir/tests"
 export PYTHONUNBUFFERED=x
-export PYLINTRC="$testdir/pylint.conf"
+export PYLINTRC="$srcdir/common/pylint.conf"
 
 testsuites=()
 testcases=()
@@ -32,7 +32,7 @@ while [[ $# -gt 0 ]]; do
     [[ -f $1 ]] && testsuites+=($1) || testcases+=($1)
     shift
 done
-for testsuite in ${testsuites[*]:-"$(dirname "$0")"/test-*.sh}; do
+for testsuite in ${testsuites[*]:-"$testdir"/test-*.sh}; do
     source $testsuite
 done
 : ${testcases:=$(declare -F | awk '/ test_/ {print $3}')}

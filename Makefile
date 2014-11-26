@@ -163,10 +163,10 @@ check-integrationtests: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" \
 	       GST_PLUGIN_PATH=$$PWD/tests/test-install/lib/gstreamer-1.0/plugins:$$GST_PLUGIN_PATH && \
 	grep -hEo '^test_[a-zA-Z0-9_]+' tests/test-*.sh |\
-	$(parallel) tests/run-tests.sh -i
+	$(parallel) common/run-tests.sh -i
 check-hardware: install-for-test
 	export PATH="$$PWD/tests/test-install/bin:$$PATH" && \
-	tests/run-tests.sh -i tests/hardware/test-hardware.sh
+	common/run-tests.sh -i tests/hardware/test-hardware.sh
 check-pylint:
 	printf "%s\n" $(PYTHON_FILES) \
 	| PYTHONPATH=$(PWD) $(parallel) extra/pylint.sh
