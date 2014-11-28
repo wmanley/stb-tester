@@ -36,7 +36,8 @@ test_that_run_tests_isnt_affected_by_user_config_file() {
 	test_key = this is overridden by the user's config
 	EOF
     export STBT_CONFIG_FILE=$(pwd)/user.conf
-    "$testdir"/run-tests.sh -i _test_that_run_tests_isnt_affected_by_user_config_file
+    "$srcdir"/common/run-tests.sh -i \
+        _test_that_run_tests_isnt_affected_by_user_config_file
 }
 _test_that_run_tests_isnt_affected_by_user_config_file() {
     assert [ "$(stbt config global.test_key)" == "this is a test value" ]
