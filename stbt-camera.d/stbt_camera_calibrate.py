@@ -10,7 +10,7 @@ import sys
 import time
 from collections import namedtuple
 from contextlib import contextmanager
-from os.path import dirname
+from os.path import abspath, dirname
 
 import cv2
 import gi
@@ -20,6 +20,7 @@ import _stbt.core
 import stbt
 from _stbt import tv_driver
 from _stbt.config import set_config, xdg_config_dir
+from _stbt.gst_hacks import run_on_stream_thread
 
 gi.require_version("Gst", "1.0")
 from gi.repository import Gst  # isort:skip pylint: disable=E0611
@@ -133,11 +134,19 @@ def calculate_distortion(ideal, measured_points, resolution):
                                  cameraMatrix, distCoeffs)[0]
 
     def describe():
-        return [
-            ('camera-matrix',
-             ' '.join([' '.join([repr(v) for v in l]) for l in cameraMatrix])),
-            ('distortion-coefficients',
-             ' '.join([repr(x) for x in distCoeffs[0]]))]
+        out = {
+            'fx': cameraMatrix[0, 0],
+            'fy': cameraMatrix[1, 1],
+            'cx': cameraMatrix[0, 2],
+            'cy': cameraMatrix[1, 2],
+
+            'k1': distCoeffs[0, 0],
+            'k2': distCoeffs[0, 1],
+            'p1': distCoeffs[0, 2],
+            'p2': distCoeffs[0, 3],
+            'k3': distCoeffs[0, 4],
+        }
+        return out
     return ReversibleTransformation(undistort, distort, describe)
 
 
@@ -145,16 +154,20 @@ def calculate_perspective_transformation(ideal, measured_points):
     ideal_2d = numpy.array([[[x, y]] for x, y in ideal],
                            dtype=numpy.float32)
     mat, _ = cv2.findHomography(measured_points, ideal_2d)
+    inv = numpy.linalg.inv(mat)
 
     def transform_perspective(points):
         return cv2.perspectiveTransform(points, mat)
 
     def untransform_perspective(points):
-        return cv2.perspectiveTransform(points, numpy.linalg.inv(mat))
+        return cv2.perspectiveTransform(points, inv)
 
     def describe():
-        return [('homography-matrix',
-                 ' '.join([' '.join([repr(x) for x in l]) for l in mat]))]
+        out = {}
+        for col in range(3):
+            for row in range(3):
+                out['ihm%i%i' % (col + 1, row + 1)] = inv[row][col]
+        return out
     return ReversibleTransformation(
         transform_perspective, untransform_perspective, describe)
 
@@ -227,16 +240,23 @@ def chessboard_calibration():
 
     geometriccorrection = stbt._dut._display.source_pipeline.get_by_name(
         'geometric_correction')
-    geometriccorrection_params = undistort.describe() + unperspect.describe()
-    for key, value in geometriccorrection_params:
-        geometriccorrection.set_property(key, value)
+    assert geometriccorrection is not None
+    geometriccorrection_params = {}
+    geometriccorrection_params.update(undistort.describe())
+    geometriccorrection_params.update(unperspect.describe())
+    preset_fragment = "".join(
+        "float %s = float(%.15f);" % x
+        for x in geometriccorrection_params.items())
+
+    run_on_stream_thread(
+        geometriccorrection.pads[0],
+        lambda: geometriccorrection.set_property("vars", preset_fragment))
 
     validate_transformation(
         corners, ideal, lambda points: unperspect.do(undistort.do(points)))
 
-    set_config(
-        'global', 'geometriccorrection_params',
-        ' '.join('%s="%s"' % v for v in geometriccorrection_params))
+    set_config('global', 'geometriccorrection_params',
+               'vars="%s"' % preset_fragment)
 
 #
 # Colour Measurement
@@ -642,7 +662,9 @@ def setup(source_pipeline):
 #
 
 defaults = {
+    'camera_prefix': abspath(dirname(__file__)),
     'contraststretch_params': '',
+    'geometriccorrection_params': 'vars="float fx = float(1.0); float fy = float(1.0); float cx = float(0.0); float cy = float(0.0); float k1 = float(0.0); float k2 = float(0.0); float p1 = float(0.0); float p2 = float(0.0); float k3 = float(0.0); float ihm11 = float(1.5); float ihm12 = float(0.0); float ihm13 = float(0.0); float ihm21 = float(0.0); float ihm22 = float(1.5); float ihm23 = float(0.0); float ihm31 = float(0.25); float ihm32 = float(0.25); float ihm33 = float(1.0);"',
     'v4l2_ctls': (
         'brightness=128,contrast=128,saturation=128,'
         'white_balance_temperature_auto=0,white_balance_temperature=6500,'
@@ -650,8 +672,14 @@ defaults = {
         'exposure_absolute=152,focus_auto=0,focus_absolute=0,'
         'power_line_frequency=1'),
     'transformation_pipeline': (
-        'stbtgeometriccorrection name=geometric_correction '
-        '   %(geometriccorrection_params)s '
+        'videoconvert '
+        ' ! glupload '
+        ' ! glshader name=geometric_correction '
+        '  location=%(camera_prefix)s/geometric-correction.frag'
+        '  %(geometriccorrection_params)s '
+        ' ! gldownload '
+        ' ! video/x-raw,width=1280,height=720 '
+        ' ! videoconvert '
         ' ! stbtcontraststretch name=illumination_correction '
         '   %(contraststretch_params)s '),
 }
