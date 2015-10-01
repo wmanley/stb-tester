@@ -140,6 +140,22 @@ def gst_pad_stream_lock(pad):
         _libglib.g_rec_mutex_unlock(plock)
 
 
+def run_on_stream_thread(pad, func):
+    def probe_callback(_pad, _info):
+        try:
+            func()
+        except:
+            # Not much we can do about this.  We're on the stream thread so
+            # can't pass this up the stack and we have no way of passing it back
+            # to the original caller of run_on_stream_thread.
+            import traceback
+            traceback.print_exc()
+
+        return Gst.PadProbeReturn.REMOVE
+
+    pad.add_probe(Gst.PadProbeType.BUFFER, probe_callback)
+
+
 def gst_iterate(gst_iterator):
     """Wrap a Gst.Iterator to expose the Python iteration protocol.  The
     gst-python package exposes similar functionality on Gst.Iterator itself so
