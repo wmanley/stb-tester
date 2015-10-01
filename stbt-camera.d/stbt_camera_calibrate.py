@@ -9,7 +9,7 @@ import subprocess
 import sys
 import time
 from contextlib import contextmanager
-from os.path import dirname
+from os.path import abspath, dirname
 
 import cv2
 import gi
@@ -20,6 +20,7 @@ import _stbt.core
 import stbt
 from _stbt import tv_driver
 from _stbt.config import set_config, xdg_config_dir
+from _stbt.gst_hacks import run_on_stream_thread
 
 gi.require_version("Gst", "1.0")
 from gi.repository import Gst  # isort:skip pylint: disable=E0611
@@ -127,27 +128,24 @@ def chessboard_calibration(timeout=10):
 
     geometriccorrection = stbt._dut._display.source_pipeline.get_by_name(
         'geometric_correction')
+    assert geometriccorrection is not None
+    geometriccorrection_params = {}
+    geometriccorrection_params.update(undistort.describe())
+    geometriccorrection_params.update(unperspect.describe())
+    preset_fragment = "".join(
+        "float %s = float(%.15f);" % x
+        for x in geometriccorrection_params.items())
 
-    geometriccorrection_params = {
-        'camera-matrix': ('{fx}    0 {cx}'
-                          '   0 {fy} {cy}'
-                          '   0    0    1').format(**params),
-        'distortion-coefficients': '{k1} {k2} {p1} {p2} {k3}'.format(**params),
-        'inv-homography-matrix': (
-            '{ihm11} {ihm21} {ihm31} '
-            '{ihm12} {ihm22} {ihm32} '
-            '{ihm13} {ihm23} {ihm33}').format(**params),
-    }
-    for key, value in geometriccorrection_params.items():
-        geometriccorrection.set_property(key, value)
+    run_on_stream_thread(
+        geometriccorrection.pads[0],
+        lambda: geometriccorrection.set_property("vars", preset_fragment))
 
     print_error_map(
         sys.stderr,
         *chessboard.find_corrected_corners(params, input_image))
 
-    set_config(
-        'global', 'geometriccorrection_params',
-        ' '.join('%s="%s"' % v for v in geometriccorrection_params.items()))
+    set_config('global', 'geometriccorrection_params',
+               'vars="%s"' % preset_fragment)
 
 #
 # Colour Measurement
@@ -553,7 +551,9 @@ def setup(source_pipeline):
 #
 
 defaults = {
+    'camera_prefix': abspath(dirname(__file__)),
     'contraststretch_params': '',
+    'geometriccorrection_params': 'vars="float fx = float(1.0); float fy = float(1.0); float cx = float(0.0); float cy = float(0.0); float k1 = float(0.0); float k2 = float(0.0); float p1 = float(0.0); float p2 = float(0.0); float k3 = float(0.0); float ihm11 = float(1.5); float ihm12 = float(0.0); float ihm13 = float(0.0); float ihm21 = float(0.0); float ihm22 = float(1.5); float ihm23 = float(0.0); float ihm31 = float(0.25); float ihm32 = float(0.25); float ihm33 = float(1.0);"',
     'v4l2_ctls': (
         'brightness=128,contrast=128,saturation=128,'
         'white_balance_temperature_auto=0,white_balance_temperature=6500,'
@@ -561,8 +561,14 @@ defaults = {
         'exposure_absolute=152,focus_auto=0,focus_absolute=0,'
         'power_line_frequency=1'),
     'transformation_pipeline': (
-        'stbtgeometriccorrection name=geometric_correction '
-        '   %(geometriccorrection_params)s '
+        'videoconvert '
+        ' ! glupload '
+        ' ! glshader name=geometric_correction '
+        '  location=%(camera_prefix)s/geometric-correction.frag'
+        '  %(geometriccorrection_params)s '
+        ' ! gldownload '
+        ' ! video/x-raw,width=1280,height=720 '
+        ' ! videoconvert '
         ' ! stbtcontraststretch name=illumination_correction '
         '   %(contraststretch_params)s '),
 }
