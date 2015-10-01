@@ -31,8 +31,10 @@ _GstMapInfo_p = ctypes.POINTER(_GstMapInfo)
 
 if platform.system() == "Darwin":
     _libgst = ctypes.CDLL(dirname(Gst.__path__) + "/../libgstreamer-1.0.dylib")
+    _libglib = ctypes.CDLL(dirname(Gst.__path__) + "/../libglib-2.0.dylib")
 else:
     _libgst = ctypes.CDLL("libgstreamer-1.0.so.0")
+    _libglib = ctypes.CDLL("libglib-2.0.so")
 _libgst.gst_buffer_map.argtypes = [ctypes.c_void_p, _GstMapInfo_p, ctypes.c_int]
 _libgst.gst_buffer_map.restype = ctypes.c_int
 
@@ -47,6 +49,12 @@ _libgst.gst_sample_get_buffer.restype = ctypes.c_void_p
 
 _libgst.gst_mini_object_is_writable.argtypes = [ctypes.c_void_p]
 _libgst.gst_mini_object_is_writable.restype = ctypes.c_int
+
+_libglib.g_rec_mutex_lock.argtypes = [ctypes.c_void_p]
+_libglib.g_rec_mutex_lock.argtypes = None
+
+_libglib.g_rec_mutex_unlock.argtypes = [ctypes.c_void_p]
+_libglib.g_rec_mutex_unlock.argtypes = None
 
 
 @contextmanager
@@ -130,3 +138,18 @@ def test_map_sample_without_buffer():
             assert False
     except ValueError:
         pass
+
+
+@contextmanager
+def gst_pad_stream_lock(pad):
+    """
+    Some GStreamer elements are not thread-safe WRT changing properties while
+    they are executing.  Acquiring the stream_lock will ensure that they're not
+    executing when we modify a property.
+    """
+    plock = hash(pad.stream_rec_lock)
+    try:
+        _libglib.g_rec_mutex_lock(plock)
+        yield
+    finally:
+        _libglib.g_rec_mutex_unlock(plock)
