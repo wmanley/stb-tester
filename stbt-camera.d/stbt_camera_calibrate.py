@@ -25,7 +25,7 @@ from _stbt.gst_hacks import run_on_stream_thread
 gi.require_version("Gst", "1.0")
 from gi.repository import Gst  # isort:skip pylint: disable=E0611
 
-COLOUR_SAMPLES = 50
+COLOUR_SAMPLES = 150
 videos = {}
 
 #
@@ -181,7 +181,9 @@ def _find_chessboard(appsink, timeout=10):
     success = False
     endtime = time.time() + timeout
     while not success and time.time() < endtime:
-        sample = appsink.emit("pull-sample")
+        for _ in range(10):
+            # Make sure we're pulling a recent sample
+            sample = appsink.emit("pull-sample")
         with _stbt.core._numpy_from_sample(sample, readonly=True) \
                 as input_image:
             success, corners = cv2.findChessboardCorners(
@@ -217,17 +219,18 @@ def _find_chessboard(appsink, timeout=10):
 def geometric_calibration(tv, device, interactive=True):
     tv.show('chessboard')
 
-    sys.stdout.write("Performing Geometric Calibration\n")
+    print "Performing Geometric Calibration"
 
-    chessboard_calibration()
+    out = chessboard_calibration()
     if interactive:
         while prompt_for_adjustment(device):
             try:
-                chessboard_calibration()
+                out = chessboard_calibration()
             except NoChessboardError:
                 tv.show('chessboard')
-                chessboard_calibration()
+                out = chessboard_calibration()
 
+    return out
 
 def chessboard_calibration():
     undistorted_appsink = \
@@ -255,8 +258,7 @@ def chessboard_calibration():
     validate_transformation(
         corners, ideal, lambda points: unperspect.do(undistort.do(points)))
 
-    set_config('global', 'geometriccorrection_params',
-               'vars="%s"' % preset_fragment)
+    return geometriccorrection_params
 
 #
 # Colour Measurement
@@ -396,7 +398,7 @@ def setup_tab_completion(completer):
 
 def prompt_for_adjustment(device):
     # Allow adjustment
-    subprocess.check_call(['v4l2-ctl', '-d', device, '-L'])
+    print subprocess.check_output(['v4l2-ctl', '-d', device, '-L'])
     ctls = dict(v4l2_ctls(device))
 
     def v4l_completer(text):
@@ -445,6 +447,42 @@ def pop_with_progress(iterator, total, width=20, stream=sys.stderr):
                 '#' * progress + ' ' * (width - progress), n, total))
         yield v
     stream.write('\r' + ' ' * (total + 28) + '\r')
+
+
+def fit(expected, measurements):
+    import scipy.optimize
+    measurements = numpy.array(measurements, dtype=numpy.uint8)
+    print measurements
+    w = numpy.array(range(128) + range(128, 0, -1), dtype=numpy.double)
+    
+    r1 = numpy.array(range(0, 254))
+    r2 = numpy.array(range(1, 255))
+    r3 = numpy.array(range(2, 256))
+
+    n_0_255 = numpy.array(range(0, 255))
+    n_1_256 = numpy.array(range(1, 256))
+
+    def fitness_fn(g):
+        gr = g[:256]
+        diff = w[measurements] * (g[measurements] - expected)
+        s = numpy.dot(diff, diff)
+
+        # Smoothness term
+        derivative = w[r2] * (g[r1] - 2 * g[r2] + g[r3])
+        smoothness = numpy.dot(derivative, derivative)
+
+        # Single valuedness term
+        inc = g[n_1_256] - g[n_0_255]
+        d = inc[inc < 0]
+        sv = 10 * 128 * numpy.dot(d, d)
+
+        lambda_ = 300
+        return s + sv + lambda_ * smoothness
+
+    initial_guess = numpy.array(range(256), dtype=numpy.double)
+    result = scipy.optimize.minimize(fitness_fn, initial_guess)
+    #assert result.success
+    return result.x
 
 
 def fit_fn(ideals, measureds):
@@ -500,11 +538,12 @@ def colour_graph():
                         [ideal[1]], [measured[1]], 'gx',
                         [ideal[2]], [measured[2]], 'bx')
 
-        fits = [fit_fn(ideals[n], measureds[n]) for n in [0, 1, 2]]
-        pyplot.plot(range(0, 256), [fits[0](x) for x in range(0, 256)], 'r-',
-                    range(0, 256), [fits[1](x) for x in range(0, 256)], 'g-',
-                    range(0, 256), [fits[2](x) for x in range(0, 256)], 'b-')
+        fits = [fit(ideals[n], measureds[n]) for n in [0, 1, 2]]
+        pyplot.plot(fits[0], range(0, 256), 'r-',
+                    fits[1], range(0, 256), 'g-',
+                    fits[2], range(0, 256), 'b-')
         pyplot.draw()
+        return fits
 
     try:
         yield update
@@ -528,9 +567,10 @@ def _can_show_graphs():
 def adjust_levels(tv, device):
     tv.show("colours2")
     with colour_graph() as update_graph:
-        update_graph()
+        out = update_graph()
         while prompt_for_adjustment(device):
-            update_graph()
+            out = update_graph()
+    return out
 
 
 #
@@ -600,11 +640,9 @@ def calibrate_illumination(tv):
 # setup
 #
 
-uvcvideosrc = ('uvch264src device=%(v4l2_device)s name=src auto-start=true '
-               'rate-control=vbr initial-bitrate=5000000 '
-               'peak-bitrate=10000000 average-bitrate=5000000 '
-               'v4l2src0::extra-controls="ctrls, %(v4l2_ctls)s" src.vidsrc ! '
-               'video/x-h264,width=1920 ! h264parse')
+uvcvideosrc = (
+    'v4l2src device=%(v4l2_device)s extra-controls="ctrls, %(v4l2_ctls)s" '
+    '! video/x-h264,width=1920 ! h264parse')
 v4l2videosrc = 'v4l2src device=%(v4l2_device)s extra-controls=%(v4l2_ctls)s'
 
 
