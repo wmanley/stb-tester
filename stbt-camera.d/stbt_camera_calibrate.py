@@ -555,9 +555,9 @@ def await_blank(brightness):
 def calibrate_illumination(tv):
     props = {
         'white-reference-image':
-            xdg_config_dir('stbt/vignetting-reference-white.png'),
+        xdg_config_dir('stbt/vignetting-reference-white.png'),
         'black-reference-image':
-            xdg_config_dir('stbt/vignetting-reference-black.png'),
+        xdg_config_dir('stbt/vignetting-reference-black.png'),
     }
 
     tv.show("blank-white")
