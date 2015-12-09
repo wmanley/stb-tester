@@ -26,6 +26,8 @@ UNRELEASED
 
 * `stbt camera` learnt how to control Android TVs over adb for calibration.
 
+* `stbt camera` learnt how to control Raspberry Pis over SSH for calibration.
+
 ##### Breaking changes since 24
 
 ##### New features
