@@ -4,7 +4,6 @@ import subprocess
 import sys
 from time import sleep
 
-from _stbt.config import get_config
 from _stbt.utils import mkdir_p
 
 
@@ -209,6 +208,7 @@ class _RaspberryPiTvDriver(object):
 
 
 def add_argparse_argument(argparser):
+    from .config import get_config
     argparser.add_argument(
         "--tv-driver",
         help="Determines how to display videos on TV.\n\n"
@@ -222,14 +222,14 @@ def add_argparse_argument(argparser):
 
 
 def create_from_args(args, video_generator):
-    return create_from_description(args.tv_driver, video_generator)
+    from .config import get_config
+    return create_from_description(
+        args.tv_driver, video_generator, get_config('camera', 'video_format'))
 
 
-def create_from_description(desc, video_generator):
+def create_from_description(desc, video_generator, video_format):
     def make_video_server():
-        return _HTTPVideoServer(
-            video_generator,
-            video_format=get_config('camera', 'video_format'))
+        return _HTTPVideoServer(video_generator, video_format=video_format)
 
     if desc == 'assume':
         return _AssumeTvDriver()
