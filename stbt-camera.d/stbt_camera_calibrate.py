@@ -176,42 +176,35 @@ class NoChessboardError(Exception):
     pass
 
 
-def _find_chessboard(appsink, timeout=10):
+def _find_chessboard(sample):
     from _stbt.gst_utils import array_from_sample
 
-    sys.stderr.write("Searching for chessboard\n")
-    success = False
-    endtime = time.time() + timeout
-    while not success and time.time() < endtime:
-        for _ in range(10):
-            # Make sure we're pulling a recent sample
-            sample = appsink.emit("pull-sample")
-        input_image = array_from_sample(sample)
-        success, corners = cv2.findChessboardCorners(
-            input_image, (29, 15), flags=cv2.cv.CV_CALIB_CB_ADAPTIVE_THRESH)
+    input_image = array_from_sample(sample)
+    success, corners = cv2.findChessboardCorners(
+        input_image, (29, 15), flags=cv2.cv.CV_CALIB_CB_ADAPTIVE_THRESH)
 
-    if success:
-        # Refine the corner measurements (not sure why this isn't built into
-        # findChessboardCorners?
-        grey_image = cv2.cvtColor(input_image, cv2.COLOR_BGR2GRAY)
-        cv2.cornerSubPix(grey_image, corners, (5, 5), (-1, -1),
-                         (cv2.TERM_CRITERIA_COUNT, 100, 0.1))
+    if not success:
+        raise NoChessboardError()
 
-        # Chessboard could have been recognised either way up.  Match it.
-        if corners[0][0][0] < corners[1][0][0]:
-            ideal = numpy.array(
-                [[x * 40 - 0.5, y * 40 - 0.5]
-                 for y in range(2, 17) for x in range(2, 31)],
-                dtype=numpy.float32)
-        else:
-            ideal = numpy.array(
-                [[x * 40 - 0.5, y * 40 - 0.5]
-                 for y in range(16, 1, -1) for x in range(30, 1, -1)],
-                dtype=numpy.float32)
+    # Refine the corner measurements (not sure why this isn't built into
+    # findChessboardCorners?
+    grey_image = cv2.cvtColor(input_image, cv2.COLOR_BGR2GRAY)
+    cv2.cornerSubPix(grey_image, corners, (5, 5), (-1, -1),
+                     (cv2.TERM_CRITERIA_COUNT, 100, 0.1))
 
-        return ideal, corners
+    # Chessboard could have been recognised either way up.  Match it.
+    if corners[0][0][0] < corners[1][0][0]:
+        ideal = numpy.array(
+            [[x * 40 - 0.5, y * 40 - 0.5]
+             for y in range(2, 17) for x in range(2, 31)],
+            dtype=numpy.float32)
     else:
-        raise NoChessboardError
+        ideal = numpy.array(
+            [[x * 40 - 0.5, y * 40 - 0.5]
+             for y in range(16, 1, -1) for x in range(30, 1, -1)],
+            dtype=numpy.float32)
+
+    return ideal, corners
 
 
 def geometric_calibration(tv, device, interactive=True):
@@ -230,24 +223,46 @@ def geometric_calibration(tv, device, interactive=True):
 
     return out
 
-def chessboard_calibration():
-    undistorted_appsink = \
-        stbt._dut._display.source_pipeline.get_by_name('undistorted_appsink')
-    ideal, corners = _find_chessboard(undistorted_appsink)
+
+def calculate_chessboard_calibration_params(frame):
+    ideal, corners = _find_chessboard(frame)
 
     undistort = calculate_distortion(ideal, corners, (1920, 1080))
     unperspect = calculate_perspective_transformation(
         ideal, undistort.do(corners))
 
-    geometriccorrection = stbt._dut._display.source_pipeline.get_by_name(
-        'geometric_correction')
-    assert geometriccorrection is not None
     geometriccorrection_params = {}
     geometriccorrection_params.update(undistort.describe())
     geometriccorrection_params.update(unperspect.describe())
+    return geometriccorrection_params
+
+
+def chessboard_calibration():
+    undistorted_appsink = \
+        stbt._dut._display.source_pipeline.get_by_name('undistorted_appsink')
+
+    sys.stderr.write("Searching for chessboard\n")
+    endtime = time.time() + timeout
+    while time.time() < endtime:
+        for _ in range(10):
+            # Make sure we're pulling a recent sample
+            sample = undistorted_appsink.emit('pull-sample')
+        with _stbt.core._numpy_from_sample(sample, readonly=True) \
+                as input_image:
+            try:
+                geometriccorrection_params = calculate_chessboard_calibration_params(input_image)
+                break
+            except NoChessboardError:
+                if time.time() > endtime:
+                    raise
+
     preset_fragment = "".join(
         "float %s = float(%.15f);" % x
         for x in geometriccorrection_params.items())
+
+    geometriccorrection = stbt._dut._display.source_pipeline.get_by_name(
+        'geometric_correction')
+    assert geometriccorrection is not None
 
     run_on_stream_thread(
         geometriccorrection.pads[0],
