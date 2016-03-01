@@ -96,17 +96,18 @@ def print_error_map(outstream, ideal_points, measured_points):
 def geometric_calibration(tv, device, interactive=True):
     tv.show('chessboard')
 
-    sys.stdout.write("Performing Geometric Calibration\n")
+    print "Performing Geometric Calibration"
 
-    chessboard_calibration()
+    out = chessboard_calibration()
     if interactive:
         while prompt_for_adjustment(device):
             try:
-                chessboard_calibration()
+                out = chessboard_calibration()
             except chessboard.NoChessboardError:
                 tv.show('chessboard')
-                chessboard_calibration()
+                out = chessboard_calibration()
 
+    return out
 
 def chessboard_calibration(timeout=10):
     from _stbt.gst_utils import array_from_sample
@@ -117,7 +118,9 @@ def chessboard_calibration(timeout=10):
     sys.stderr.write("Searching for chessboard\n")
     endtime = time.time() + timeout
     while time.time() < endtime:
-        sample = undistorted_appsink.emit('pull-sample')
+        for _ in range(10):
+            # Make sure we're pulling a recent sample
+            sample = undistorted_appsink.emit("pull-sample")
         try:
             input_image = array_from_sample(sample)
             params = chessboard.calculate_calibration_params(input_image)
@@ -144,8 +147,7 @@ def chessboard_calibration(timeout=10):
         sys.stderr,
         *chessboard.find_corrected_corners(params, input_image))
 
-    set_config('global', 'geometriccorrection_params',
-               'vars="%s"' % preset_fragment)
+    return geometriccorrection_params
 
 #
 # Colour Measurement
@@ -285,7 +287,7 @@ def setup_tab_completion(completer):
 
 def prompt_for_adjustment(device):
     # Allow adjustment
-    subprocess.check_call(['v4l2-ctl', '-d', device, '-L'])
+    print subprocess.check_output(['v4l2-ctl', '-d', device, '-L'])
     ctls = dict(v4l2_ctls(device))
 
     def v4l_completer(text):
