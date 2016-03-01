@@ -190,20 +190,27 @@ class _RaspberryPiTvDriver(object):
         self.video_server = video_server
         self.proc = None
         self.hostname = hostname
+        try:
+            subprocess.check_output(['ssh', 'pi@%s' % self.hostname, 'true'],
+                                    stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
+            print "ssh to raspberry pi failed: %s" % e.output
+            raise
 
     def show(self, video):
+        self.stop()
         cmd = ['ssh', 'pi@%s' % self.hostname,
-               'killall omxplayer 2>&1 >/dev/null; '
                'omxplayer -o hdmi -p -b --loop %s'
                % pipes.quote(self.video_server.get_url(video))]
         with open('/dev/null') as devnull:
             self.proc = subprocess.Popen(cmd, stdin=devnull)
 
     def stop(self):
-        self.proc.kill()
+        if self.proc and self.proc.poll() is None:
+            self.proc.kill()
         with open('/dev/null') as devnull:
             subprocess.call(
-                ['ssh', 'pi@%s' % self.hostname, 'killall omxplayer'],
+                ['ssh', 'pi@%s' % self.hostname, 'killall omxplayer.bin'],
                 stdin=devnull)
 
 
