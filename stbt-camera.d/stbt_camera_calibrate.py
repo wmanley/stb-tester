@@ -181,7 +181,9 @@ def _find_chessboard(appsink, timeout=10):
     success = False
     endtime = time.time() + timeout
     while not success and time.time() < endtime:
-        sample = appsink.emit("pull-sample")
+        for _ in range(10):
+            # Make sure we're pulling a recent sample
+            sample = appsink.emit("pull-sample")
         with _stbt.core._numpy_from_sample(sample, readonly=True) \
                 as input_image:
             success, corners = cv2.findChessboardCorners(
@@ -217,17 +219,18 @@ def _find_chessboard(appsink, timeout=10):
 def geometric_calibration(tv, device, interactive=True):
     tv.show('chessboard')
 
-    sys.stdout.write("Performing Geometric Calibration\n")
+    print "Performing Geometric Calibration"
 
-    chessboard_calibration()
+    out = chessboard_calibration()
     if interactive:
         while prompt_for_adjustment(device):
             try:
-                chessboard_calibration()
+                out = chessboard_calibration()
             except NoChessboardError:
                 tv.show('chessboard')
-                chessboard_calibration()
+                out = chessboard_calibration()
 
+    return out
 
 def chessboard_calibration():
     undistorted_appsink = \
@@ -255,8 +258,7 @@ def chessboard_calibration():
     validate_transformation(
         corners, ideal, lambda points: unperspect.do(undistort.do(points)))
 
-    set_config('global', 'geometriccorrection_params',
-               'vars="%s"' % preset_fragment)
+    return geometriccorrection_params
 
 #
 # Colour Measurement
@@ -396,7 +398,7 @@ def setup_tab_completion(completer):
 
 def prompt_for_adjustment(device):
     # Allow adjustment
-    subprocess.check_call(['v4l2-ctl', '-d', device, '-L'])
+    print subprocess.check_output(['v4l2-ctl', '-d', device, '-L'])
     ctls = dict(v4l2_ctls(device))
 
     def v4l_completer(text):
