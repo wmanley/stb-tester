@@ -132,8 +132,8 @@ def is_valid_python_identifier(x):
 
 
 def prune_empty_directories(dir_):
-    for root, _dirs, files in os.walk(dir_, topdown=False):
-        if len(files) == 0 and root != dir_:
+    for root, dirs, files in os.walk(dir_, topdown=False):
+        if len(files) == 0 and len(dirs) == 0 and root != dir_:
             try:
                 os.rmdir(root)
             except OSError as e:
