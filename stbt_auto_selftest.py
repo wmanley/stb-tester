@@ -50,6 +50,7 @@ import argparse
 import cStringIO
 import errno
 import fnmatch
+import inspect
 import multiprocessing
 import os
 import re
@@ -262,6 +263,19 @@ class Item(namedtuple('Item', 'name expressions screenshots try_screenshots')):
     pass
 
 
+def normalize_pyc(filename):
+    """
+    >>> normalize_pyc('a.py')
+    'a.py'
+    >>> normalize_pyc('a.pyc')
+    'a.py'
+    """
+    if filename.endswith(".pyc"):
+        return filename[:-1]
+    else:
+        return filename
+
+
 def inspect_module(module_filename):
     """
     Pulls the relevant information from the module required to generate tests.
@@ -271,9 +285,13 @@ def inspect_module(module_filename):
     try:
         out = []
         module = import_by_filename(module_filename)
+        fn = normalize_pyc(inspect.getfile(module))
         for x in dir(module):
             item = getattr(module, x)
-            if getattr(item, '__module__', None) != module.__name__:
+            try:
+                if normalize_pyc(inspect.getfile(item)) != fn:
+                    continue
+            except TypeError:
                 continue
             expressions = list(getattr(item, 'AUTO_SELFTEST_EXPRESSIONS', []))
             if not expressions:
@@ -302,8 +320,8 @@ def write_bare_doctest(module, output_filename):
     outfile = cStringIO.StringIO()
     screenshots_rel = os.path.relpath(
         SCREENSHOTS_ROOT, os.path.dirname(output_filename))
-    module_rel = os.path.relpath(
-        os.path.dirname(module.filename), os.path.dirname(output_filename))
+    path, modname = lookup_import_by_filename(module.filename)
+    module_rel = os.path.relpath(path, os.path.dirname(output_filename))
     outfile.write(dedent(r'''        #!/usr/bin/env python
         # coding=utf-8
         """
@@ -326,7 +344,7 @@ def write_bare_doctest(module, output_filename):
         sys.path.insert(0, os.path.join(
             os.path.dirname(__file__), {module_rel}))
 
-        from {name} import *  # isort:skip pylint: disable=wildcard-import, import-error
+        from {modname} import *  # isort:skip pylint: disable=wildcard-import, import-error
 
         _FRAME_CACHE = {{}}
 
@@ -342,7 +360,7 @@ def write_bare_doctest(module, output_filename):
                 img.flags.writeable = False
                 _FRAME_CACHE[name] = img
             return img
-        '''.format(name=os.path.basename(module.filename[:-3]),
+        '''.format(modname=modname,
                    screenshots_rel=repr(screenshots_rel),
                    module_rel=repr(module_rel))))
 
@@ -539,13 +557,33 @@ def _find_test_pack_root():
         root = os.path.split(root)[0]
 
 
-def import_by_filename(filename_):
+def lookup_import_by_filename(filename_):
     module_dir, module_file = os.path.split(filename_)
     module_name, module_ext = os.path.splitext(module_file)
     if module_ext != '.py':
         raise ImportError("Invalid module filename '%s'" % filename_)
-    sys.path = [os.path.abspath(module_dir)] + sys.path
-    return __import__(module_name)
+
+    # Have to deal with modules
+    import_path = list(os.path.split(os.path.normpath(module_dir)))
+    import_name = [module_name]
+    while import_path:
+        if import_path[-1] == '..':
+            break
+        elif os.path.exists("/".join(import_path + ['__init__.py'])):
+            import_name.insert(0, import_path[-1])
+            del import_path[-1]
+        else:
+            break
+    if not import_path:
+        import_path = ['.']
+    return os.path.abspath(os.path.join(*import_path)), ".".join(import_name)
+
+
+def import_by_filename(filename):
+    from importlib import import_module
+    path, modname = lookup_import_by_filename(filename)
+    sys.path = [path] + sys.path
+    return import_module(modname)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
