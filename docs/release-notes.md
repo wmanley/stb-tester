@@ -94,6 +94,10 @@ UNRELEASED
   reached. This allows you to use a short `timeout_secs` with operations that
   can take a long time.
 
+* `stbt batch run`: New option `--no-save-video` - disables saving video of each
+  test run.  This can be used to reduce resource consumption when videos records
+  aren't required or are being captured in some other way.
+
 ##### Maintainer-visible changes
 
 
