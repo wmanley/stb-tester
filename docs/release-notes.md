@@ -98,6 +98,9 @@ UNRELEASED
   test run.  This can be used to reduce resource consumption when videos records
   aren't required or are being captured in some other way.
 
+* `sink_pipeline` can now be set to `disable`.  This will have the same effect
+  as `sink_pipeline = fakesink` but with lower resource utilisation.
+
 ##### Maintainer-visible changes
 
 
