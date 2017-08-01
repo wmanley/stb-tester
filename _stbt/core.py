@@ -1852,7 +1852,6 @@ class Display(object):
         self.last_used_frame = None
         self.source_pipeline = None
         self.init_time = time.time()
-        self.start_timestamp = None
         self.underrun_timeout = None
         self.tearing_down = False
         self.restart_source_enabled = restart_source
@@ -1907,7 +1906,6 @@ class Display(object):
             # Hauppauge HDPVR capture device.
             source_queue = self.source_pipeline.get_by_name(
                 "_stbt_user_data_queue")
-            self.start_timestamp = None
             source_queue.connect("underrun", self.on_underrun)
             source_queue.connect("running", self.on_running)
 
@@ -1948,27 +1946,24 @@ class Display(object):
 
     def frames(self, timeout_secs=None):
         import time
-        self.start_timestamp = None
+        if timeout_secs is not None:
+            end_time = time.time() + timeout_secs
 
         with self.lock:
             while True:
                 ddebug("user thread: Getting sample at %s" % time.time())
-                sample = self._get_sample(max(10, timeout_secs))
+                sample = self._get_sample(max(10, timeout_secs or 0))
                 ddebug("user thread: Got sample at %s" % time.time())
                 timestamp = sample.time
-
-                if timeout_secs is not None:
-                    if not self.start_timestamp:
-                        self.start_timestamp = timestamp
-                    if timestamp - self.start_timestamp > timeout_secs:
-                        debug("timed out: %.3f - %.3f > %.3f" % (
-                            timestamp, self.start_timestamp, timeout_secs))
-                        return
 
                 try:
                     yield array_from_sample(sample)
                 finally:
                     self._sink_pipeline.push_sample(sample)
+
+                if timeout_secs is not None and timestamp > end_time:
+                    debug("timed out: %.3f > %.3f" % (timestamp, end_time))
+                    return
 
     def on_new_sample(self, appsink):
         sample = appsink.emit("pull-sample")
