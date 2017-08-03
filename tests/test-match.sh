@@ -555,3 +555,32 @@ test_that_matchtimeout_screenshot_doesnt_include_visualisation() {
     stbt match screenshot.png "$testdir"/black-full-frame.png \
         match_method=ccoeff-normed
 }
+
+test_global_use_old_threading_behaviour() {
+    set_config global.use_old_threading_behaviour true
+
+    cat > test.py <<-EOF &&
+	ts = set()
+	for _ in range(10):
+	    ts.add(stbt.get_frame().time)
+	assert len(ts) == 10
+	print "Saw %i unique frames" % len(ts)
+	EOF
+    stbt run test.py 2>stderr.log || fail "Incorrect get_frame() behaviour"
+
+    grep -q "stb-tester/stb-tester/pull/449" stderr.log \
+        || fail "use_old_threading_behaviour Warning not printed"
+
+    set_config global.use_old_threading_behaviour false
+
+    cat > test.py <<-EOF &&
+	ts = set()
+	for _ in range(10):
+	    ts.add(stbt.get_frame().time)
+	assert len(ts) < 5
+	print "Saw %i unique frames" % len(ts)
+	EOF
+    stbt run test.py 2>stderr.log || fail "Incorrect get_frame() behaviour"
+    ! grep -q "stb-tester/stb-tester/pull/449" stderr.log \
+        || fail "use_old_threading_behaviour warning shouldn't be printed"
+}

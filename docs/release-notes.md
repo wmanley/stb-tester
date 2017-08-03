@@ -83,6 +83,17 @@ UNRELEASED
   Functions that depend on this behaviour should be refactored to use the
   `stbt.frames()` iterator method instead.
 
+  If this change causes you problems you can add:
+
+      [global]
+      use_old_threading_behaviour = true
+
+  to your `stbt.conf` to restore the old behaviour. This option may be removed
+  in the future. Please let us know on [stb-tester/stb-tester#449] if this will
+  cause you problems.
+
+[stb-tester/stb-tester#449]: https://github.com/stb-tester/stb-tester/pull/449
+
 ##### New features
 
 * Python API: stbt can now be used from multiple threads simultaneously. Each
