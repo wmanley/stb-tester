@@ -92,6 +92,9 @@ UNRELEASED
   in the future. Please let us know on [stb-tester/stb-tester#449] if this will
   cause you problems.
 
+* `stbt.get_frame()` and `stbt.frames()` now return read-only frames for better
+  performance.  Use `frame.copy()` to make a frame read-write.
+
 [stb-tester/stb-tester#449]: https://github.com/stb-tester/stb-tester/pull/449
 
 ##### New features
