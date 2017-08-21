@@ -1547,8 +1547,7 @@ def argparser():
              '(default: %(default)s)')
     parser.add_argument(
         '--restart-source', action='store_true',
-        default=(get_config('global', 'restart_source').lower() in
-                 ("1", "yes", "true", "on")),
+        default=get_config('global', 'restart_source', type_=bool),
         help='Restart the GStreamer source pipeline when video loss is '
              'detected')
 
