@@ -1713,8 +1713,12 @@ class SinkPipeline(object):
             else:
                 vp8enc = "vp8enc cpu-used=6 min_quantizer=32 max_quantizer=32"
             video_pipeline = (
-                "t. ! queue leaky=downstream ! videoconvert ! "
-                "{vp8enc} ! webmmux ! filesink location={location}"
+                "t. "
+                "! queue name=queue_save_video leaky=downstream "
+                "! videoconvert "
+                "! {vp8enc} "
+                "! webmmux "
+                "! filesink location={location}"
                 .format(vp8enc=vp8enc, location=save_video))
         else:
             video_pipeline = ""
@@ -1724,8 +1728,10 @@ class SinkPipeline(object):
             "caps=video/x-raw,format=(string)BGR !",
             "tee name=t",
             video_pipeline,
-            "t. ! queue leaky=downstream ! videoconvert !",
-            user_sink_pipeline
+            "t. "
+            "! queue name=queue-user-sink=pipeline leaky=downstream "
+            "! videoconvert "
+            "!" + user_sink_pipeline
         ])
 
         self.sink_pipeline = Gst.parse_launch(sink_pipeline_description)
