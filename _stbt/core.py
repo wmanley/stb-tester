@@ -586,7 +586,9 @@ def load_image(filename, flags=cv2.IMREAD_COLOR):
 
 def _crop(frame, region):
     if not _image_region(frame).contains(region):
-        raise ValueError("'frame' doesn't contain 'region'")
+        raise ValueError(
+            "'frame' with shape %r doesn't contain 'region' %r" % (
+                frame.shape, region))
     return frame[region.y:region.bottom, region.x:region.right]
 
 
