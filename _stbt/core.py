@@ -1047,9 +1047,11 @@ class DeviceUnderTest(object):
         match_count = 0
         last_pos = Position(0, 0)
         image = _load_template(image)
+        frame = None
         for res in self.detect_match(
                 image, timeout_secs, match_parameters=match_parameters,
                 region=region):
+            frame = res.frame
             if res.match and (match_count == 0 or res.position == last_pos):
                 match_count += 1
             else:
@@ -1059,7 +1061,7 @@ class DeviceUnderTest(object):
                 debug("Matched " + image.friendly_name)
                 return res
 
-        raise MatchTimeout(res.frame, image.friendly_name, timeout_secs)  # pylint: disable=W0631,C0301
+        raise MatchTimeout(frame, image.friendly_name, timeout_secs)  # pylint: disable=W0631,C0301
 
     def press_until_match(
             self,
@@ -1119,7 +1121,9 @@ class DeviceUnderTest(object):
 
         matches = deque(maxlen=considered_frames)
         motion_count = 0
+        frame = None
         for res in self.detect_motion(timeout_secs, noise_threshold, mask):
+            frame = res.frame
             motion_count += bool(res)
             if len(matches) == matches.maxlen:
                 motion_count -= bool(matches.popleft())
@@ -1134,8 +1138,7 @@ class DeviceUnderTest(object):
                 assert False, ("Logic error in wait_for_motion: This code "
                                "should never be reached")
 
-        screenshot = self.get_frame()
-        raise MotionTimeout(screenshot, mask, timeout_secs)
+        raise MotionTimeout(frame, mask, timeout_secs)
 
     def ocr(self, frame=None, region=Region.ALL,
             mode=OcrMode.PAGE_SEGMENTATION_WITHOUT_OSD,
@@ -1226,11 +1229,11 @@ class DeviceUnderTest(object):
             if self._use_old_threading_behaviour:
                 self._last_grabbed_frame_time = timestamp
 
-            yield frame, int(frame.time * 1e9)
-
             if timeout_secs is not None and timestamp > end_time:
                 debug("timed out: %.3f > %.3f" % (timestamp, end_time))
                 return
+
+            yield frame, int(frame.time * 1e9)
 
     def get_frame(self):
         if self._use_old_threading_behaviour:

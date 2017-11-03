@@ -64,15 +64,6 @@ test_get_config() {
     stbt run -v test.py
 }
 
-test_that_frames_returns_at_least_one_frame() {
-    cat > test.py <<-EOF
-	import stbt
-	stbt.frames(timeout_secs=0).next()
-	stbt.frames(timeout_secs=0).next()
-	EOF
-    stbt run -v test.py
-}
-
 test_that_frames_doesnt_time_out() {
     cat > test.py <<-EOF
 	import stbt
@@ -568,13 +559,13 @@ test_that_transformation_pipeline_transforms_video() {
         "videoflip method=horizontal-flip"
     cat > test.py <<-EOF
 	wait_for_match(
-	    "$testdir/videotestsrc-redblue-flipped.png", timeout_secs=0)
+	    "$testdir/videotestsrc-redblue-flipped.png")
 	EOF
     stbt run -v test.py || fail "Video was not flipped"
 
     cat > test.py <<-EOF
 	wait_for_match(
-	    "$testdir/videotestsrc-redblue.png", timeout_secs=0)
+	    "$testdir/videotestsrc-redblue.png")
 	EOF
     ! stbt run -v test.py || fail "Test invalid, shouldn't have matched"
 }
