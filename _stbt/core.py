@@ -2272,15 +2272,14 @@ if cv2.__version__.startswith('2.'):
     def _find_contour_boxes(image, mode, method):
         contours = cv2.findContours(image=image, mode=mode, method=method)[0]
         return [
-            _Rect(*cv2.boundingRect(x))
-            .shift(Position(-1, -1)).expand(_Size(2, 2))
+            Region(*cv2.boundingRect(x)).extend(-1, -1, 1, 1)
             for x in contours]
     _FILLED = cv2.cv.CV_FILLED
     _LINE_AA = cv2.CV_AA
 else:
     def _find_contour_boxes(image, mode, method):
         contours = cv2.findContours(image=image, mode=mode, method=method)[1]
-        return [_Rect(*cv2.boundingRect(x)) for x in contours]
+        return [Region(*cv2.boundingRect(x)) for x in contours]
     _FILLED = cv2.FILLED  # pylint: disable=no-member
     _LINE_AA = cv2.LINE_AA  # pylint: disable=no-member
 
@@ -2297,8 +2296,8 @@ def _match_template(image, template, method, roi_mask, level, imwrite):
             dtype=numpy.float32))
 
     if roi_mask is None:
-        rois = [  # Initial region of interest: The whole image.
-            _Rect(0, 0, matches_heatmap.shape[1], matches_heatmap.shape[0])]
+        # Initial region of interest: The whole image.
+        rois = [_image_region(matches_heatmap)]
     else:
         rois = _find_contour_boxes(
             roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
@@ -2306,26 +2305,26 @@ def _match_template(image, template, method, roi_mask, level, imwrite):
     if logging.get_debug_level() > 1:
         source_with_rois = image.copy()
         for roi in rois:
-            r = roi
-            t = _Size(*template.shape[:2])
-            s = _Size(*source_with_rois.shape[:2])
+            t = _image_region(template)
+            box = Region.intersect(
+                roi.extend(right=t.width, bottom=t.height),
+                _image_region(source_with_rois))
             cv2.rectangle(
                 source_with_rois,
-                (max(0, r.x), max(0, r.y)),
-                (min(s.w - 1, r.x + r.w + t.w - 1),
-                 min(s.h - 1, r.y + r.h + t.h - 1)),
+                (box.x, box.y), (box.right - 1, box.bottom - 1),
                 (0, 255, 255),
                 thickness=1)
         imwrite("source_with_rois", source_with_rois)
 
     for roi in rois:
-        r = roi.expand(_Size(*template.shape[:2])).shrink(_Size(1, 1))
+        r = roi.extend(right=template.shape[1] - 1,
+                       bottom=template.shape[0] - 1)
         ddebug("Level %d: Searching in %s" % (level, roi))
         cv2.matchTemplate(
-            image[r.to_slice()],
+            _crop(image, r),
             template,
             method,
-            matches_heatmap[roi.to_slice()])
+            _crop(matches_heatmap, roi))
 
     imwrite("source", image)
     imwrite("template", template)
@@ -2380,27 +2379,6 @@ def _upsample(position, levels):
     function is a no-op).
     """
     return Position(position.x * 2 ** levels, position.y * 2 ** levels)
-
-
-# Order of parameters consistent with ``cv2.boundingRect``.
-class _Rect(namedtuple("_Rect", "x y w h")):
-    def expand(self, size):
-        return _Rect(self.x, self.y, self.w + size.w, self.h + size.h)
-
-    def shrink(self, size):
-        return _Rect(self.x, self.y, self.w - size.w, self.h - size.h)
-
-    def shift(self, position):
-        return _Rect(self.x + position.x, self.y + position.y, self.w, self.h)
-
-    def to_slice(self):
-        """Return a 2-dimensional slice suitable for indexing a numpy array."""
-        return (slice(self.y, self.y + self.h), slice(self.x, self.x + self.w))
-
-
-# Order of parameters consistent with OpenCV's ``numpy.ndarray.shape``.
-class _Size(namedtuple("_Size", "h w")):
-    pass
 
 
 def _confirm_match(image, region, template, match_parameters, imwrite):
