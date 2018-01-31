@@ -1915,9 +1915,9 @@ class SinkPipeline(object):
                     texts.append(x)
             self.text_annotations = texts[:]
             for annotation in list(self.annotations):
-                if annotation.time == now:
+                if now <= annotation.time < now + 1. / 25.:
                     annotations.append(annotation)
-                if now >= annotation.time:
+                if annotation.time <= now:
                     self.annotations.remove(annotation)
 
         sample = gst_sample_make_writable(sample)
