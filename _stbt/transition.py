@@ -31,10 +31,73 @@ def press_and_wait(
     """Press a key, then wait for the screen to change, then wait for it to stop
     changing.
 
-    This can be used to wait for a menu selection to finish moving before
-    attempting to OCR at the selection's new position; or to measure the
-    duration of animations; or to measure how long it takes for a screen (such
-    as an EPG) to finish populating.
+    This should be used instead of ``press`` where possible.  Unlike ``press``,
+    this function waits for and measures the effect of pressing the key.  This
+    makes your test-scripts more robust and helps with performance measurements.
+
+    Typically ``press_and_wait`` is used with `assert` to ensure that the
+    device-under-test reacted to your keypress at all.  Example:
+
+        assert press_and_wait('KEY_DOWN')
+
+    will fail the test if no change is detected after pressing 'KEY_DOWN', or if
+    the screen doesn't stop changing within `timeout_secs`.
+
+    ``press_and_wait`` and transparency
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    ``press_and_wait`` waits for a lack of motion to determine when an animation
+    has completed.  If your UI features a transparent background with video
+    playing or picture-in-picture these areas should be ignored using the mask
+    or region arguments.
+
+    Example
+
+    You have an opaque menu that appears on top of live TV on the right hand
+    side:
+
+    .. image:: supertv.jpg
+
+    The motion from live TV is not relevant for navigating the menu so you
+    specify a region that corresponds to the menu on the left.  This is the
+    leftmost 400 pixels:
+
+        MENU_REGION = stbt.Region(0, 0, 400, 720)
+        assert press_and_wait('KEY_DOWN', region=MENU_REGION)
+
+    The dogs programme can continue in the background and won't affect your
+    measurements.
+
+    ``press_and_wait`` and performance measurements
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    ``press_and_wait`` can be used to measure the responsiveness of your UI and
+    the duration of your animations.
+
+    Example: Measuring EPG load time
+
+    You want to press OK to open the Guide and measure how long it takes to
+    populate:
+
+        transition = press_and_wait('KEY_OK', timeout_secs=20, stable_secs=5)
+        assert transition, "Guide didn't finish loading within 20s"
+
+        print "Loading the guide took {duration} seconds".format(
+            duration=transition.duration)
+
+    `assert transition` will cause the test to fail if the device-under-test
+    ignores the OK keypress, or if the EPG is still changing after the 20s
+    timeout.  This ensures that the test is valid.
+
+    We specify `stable_secs=5` here because there may be some time where the
+    EPG is still loading and lacks motion, but still isn't fully loaded.  The
+    1s default may not be long enough for an EPG to load it's data from the
+    network for example.
+
+    At the end of the test we print the time the EPG took to load.
+    Alternatively you could log this time to a monitoring/logging system for
+    live measurements of EPG performance - but this is outside the scope of this
+    example.
 
     :param str key: The name of the key to press (passed to `stbt.press`).
 

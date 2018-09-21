@@ -112,6 +112,11 @@ _dut = _stbt.core.DeviceUnderTest()
 def press(key, interpress_delay_secs=None, hold_secs=None):
     """Send the specified key-press to the device under test.
 
+    It is often better to use ``press_and_wait`` instead of ``press``.  Unlike
+    ``press`` ``press_until_wait`` will wait until the effect of the press has
+    completed.  ``press_until_wait`` makes your test-scripts more robust and
+    helps with performance measurements.
+
     :param str key:
         The name of the key/button.
 
