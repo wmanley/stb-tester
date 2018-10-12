@@ -268,6 +268,40 @@ test_that_stbt_run_can_print_exceptions_with_encoded_utf8_string() {
     assert check_unicode_error
 }
 
+assert_contains()
+{
+    if ! grep -qF "$2" "$1"; then
+        echo "$1 doesn't contain text $2.  Contents:"
+        cat "$1"
+        fail
+    fi
+}
+
+test_that_stbt_run_can_print_ioerror() {
+    cat > test.py <<-EOF
+	open("nonexistent")
+	EOF
+
+    ! stbt run test.py &> mylog
+    assert_contains mylog "IOError: [Errno 2] No such file or directory: 'nonexistent'"
+
+    cat > test.py <<-EOF
+	# coding: utf-8
+	open("nönexistent")
+	EOF
+
+    ! env LANG=C.UTF-8 stbt run test.py &> mylog
+    assert_contains mylog "IOError: [Errno 2] No such file or directory: 'n\\xc3\\xb6nexistent'"
+
+    cat > test.py <<-EOF
+	# coding: utf-8
+	open(u"nönexistent")
+	EOF
+
+    ! env LANG=C.UTF-8 stbt run test.py &> mylog
+    assert_contains mylog "IOError: [Errno 2] No such file or directory: u'n\\xf6nexistent'"
+}
+
 test_that_error_control_raises_exception() {
     cat > test.py <<-EOF
 	import stbt

@@ -116,7 +116,8 @@ def sane_unicode_and_exception_handling(script):
     """
     # Simulates python3's defaulting to utf-8 output so we don't get confusing
     # `UnicodeEncodeError`s when printing unicode characters:
-    from kitchen.text.converters import getwriter, exception_to_bytes, to_bytes
+    from kitchen.text.converters import (
+        getwriter, EXCEPTION_CONVERTERS, exception_to_bytes, to_bytes)
     if sys.stdout.encoding is None:
         sys.stdout = getwriter('utf8')(sys.stdout)
     if sys.stderr.encoding is None:
@@ -125,7 +126,7 @@ def sane_unicode_and_exception_handling(script):
     try:
         yield
     except Exception as e:  # pylint: disable=W0703
-        error_message = exception_to_bytes(e)
+        error_message = exception_to_bytes(e, (str,) + EXCEPTION_CONVERTERS)
         if not error_message and isinstance(e, AssertionError):
             error_message = traceback.extract_tb(sys.exc_info()[2])[-1][3]
         sys.stdout.write("FAIL: %s: %s: %s\n" % (
