@@ -1,3 +1,4 @@
+import errno
 import inspect
 import os
 from collections import namedtuple
@@ -154,7 +155,7 @@ def find_user_file(filename):
         ddebug("Resolved relative path %r to %r" % (filename, abspath))
         return abspath
 
-    raise IOError("No such file: %s" % filename)
+    raise IOError(errno.ENOENT, "No such file or directory", filename)
 
 
 def _iter_frames(depth=1):

@@ -52,9 +52,9 @@ test_wait_for_motion_nonexistent_mask() {
     timeout 10 stbt run -v test.py &> test.log
     local ret=$?
     [ $ret -ne $timedout -a $ret -ne 0 ] || fail "Unexpected exit status $ret"
-    grep -q "No such file: idontexist.png" test.log ||
-        fail "Expected 'No such file: idontexist.png' but saw '$(
-            grep 'No such file' test.log | head -n1)'"
+    grep -q "No such file or directory: idontexist.png" test.log ||
+        fail "Expected 'No such file or directory: idontexist.png' but saw '$(
+            grep 'No such file or directory' test.log | head -n1)'"
 }
 
 test_wait_for_motion_with_region_reports_motion() {
