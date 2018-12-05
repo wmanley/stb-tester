@@ -73,7 +73,7 @@ class _FrameObjectMeta(type):
         property_names = sorted([
             p for p in dir(cls)
             if isinstance(getattr(cls, p), property)])
-        assert 'is_visible' in property_names
+        cls.is_visible
         cls._fields = tuple(["is_visible"] + sorted(
             x for x in property_names
             if x != "is_visible" and not x.startswith('_')))
