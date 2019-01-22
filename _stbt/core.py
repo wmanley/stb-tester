@@ -181,22 +181,29 @@ class DeviceUnderTest(object):
     @contextmanager
     def pressing(self, key, interpress_delay_secs=None):
         with self._interpress_delay(interpress_delay_secs):
+            holding_annotation = None
             try:
                 self._control.keydown(key)
-                self.draw_text("Holding %s" % key, duration_secs=3)
+                holding_annotation = self._sink_pipeline.draw(
+                    "Holding %s" % key, duration_secs=float('inf'))
                 yield
             except:  # pylint:disable=bare-except
                 exc_info = sys.exc_info()
                 try:
                     self._control.keyup(key)
-                    self.draw_text("Released %s" % key, duration_secs=3)
+                    released_annotation = self._sink_pipeline.draw(
+                        "Released %s" % key, duration_secs=3)
+                    if holding_annotation:
+                        holding_annotation.end_time = released_annotation.time
                 except Exception:  # pylint:disable=broad-except
                     # Don't mask original exception from the test script.
                     pass
                 raise exc_info[0], exc_info[1], exc_info[2]
             else:
                 self._control.keyup(key)
-                self.draw_text("Released %s" % key, duration_secs=3)
+                released_annotation = self._sink_pipeline.draw(
+                    "Released %s" % key, duration_secs=3)
+                holding_annotation.end_time = released_annotation.time
 
     @contextmanager
     def _interpress_delay(self, interpress_delay_secs):
@@ -600,7 +607,12 @@ class _Annotation(namedtuple("_Annotation", "time region label colour")):
         _draw_text(img, self.label, label_loc, (255, 255, 255), font_scale=0.5)
 
 
-class _TextAnnotation(namedtuple("_TextAnnotation", "time text duration")):
+class _TextAnnotation(object):
+    def __init__(self, time, text, duration):
+        self.time = time
+        self.text = text
+        self.duration = duration
+
     @property
     def end_time(self):
         return self.time + self.duration
@@ -762,8 +774,8 @@ class SinkPipeline(object):
                     datetime.datetime.fromtimestamp(start_time).strftime(
                         "%H:%M:%S.%f")[:-4] +
                     ' ' + obj)
-                self.text_annotations.append(
-                    _TextAnnotation(start_time, text, duration_secs))
+                annotation = _TextAnnotation(start_time, text, duration_secs)
+                self.text_annotations.append(annotation)
             elif hasattr(obj, "region") and hasattr(obj, "time"):
                 annotation = _Annotation.from_result(obj, label=label)
                 if annotation.time:
@@ -771,6 +783,7 @@ class SinkPipeline(object):
             else:
                 raise TypeError(
                     "Can't draw object of type '%s'" % type(obj).__name__)
+        return annotation
 
 
 class NoSinkPipeline(object):
@@ -788,8 +801,8 @@ class NoSinkPipeline(object):
     def on_sample(self, _sample):
         pass
 
-    def draw(self, _obj, _duration_secs=None, label=""):
-        pass
+    def draw(self, _obj, duration_secs=None, label=""):  # pylint: disable=unused
+        return _TextAnnotation(0, duration_secs or 3, label)
 
 
 class Display(object):
