@@ -336,20 +336,21 @@ def test_that_match_fast_path_is_equivalent():
 
 
 def test_merge_regions():
-    regions = [stbt.Region(*x) for x in [
+    regions = numpy.array([
         (153, 156, 16, 4), (121, 155, 25, 5), (14, 117, 131, 32),
         (128, 100, 19, 5), (122, 81, 22, 14), (123, 73, 5, 4),
         (0, 71, 12, 75), (146, 64, 1, 1), (111, 64, 10, 2), (22, 62, 9, 4),
         (0, 60, 17, 10), (111, 54, 2, 2), (138, 47, 5, 2), (132, 47, 3, 1),
         (130, 46, 1, 2), (55, 32, 11, 1), (52, 32, 1, 1), (0, 29, 50, 28),
-        (0, 20, 57, 4), (33, 0, 233, 139)]]
-    _merge_regions(regions)
+        (0, 20, 57, 4), (33, 0, 233, 139)], dtype=numpy.uint16)
+    regions = _merge_regions(regions)
     assert len(regions) == 9
-    assert sorted(regions) == (
-        [stbt.Region(*x) for x in [
+    regions.sort()
+    assert regions == numpy.array(
+        [
             (0, 20, 57, 4), (0, 29, 50, 28), (0, 60, 17, 10), (0, 71, 12, 75),
             (14, 117, 131, 32), (22, 62, 9, 4), (33, 0, 233, 139),
-            (121, 155, 25, 5), (153, 156, 16, 4)]])
+            (121, 155, 25, 5), (153, 156, 16, 4)])
 
 
 @pytest.mark.parametrize("n", [20, 200, 2000])

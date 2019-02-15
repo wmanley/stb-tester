@@ -676,7 +676,7 @@ def _match_template(image, template, mask, method, roi_mask, level, imwrite):
         rois = cv2_compat.find_contour_boxes(
             roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         rois[:, 2:4] += rois[:, 0:2]
-        # _merge_regions(rois)
+        rois = _merge_regions(rois)
 
     if get_debug_level() > 1:
         source_with_rois = image.copy()
@@ -839,17 +839,48 @@ def _confirm_match(image, region, template, match_parameters, imwrite):
     return cv2.countNonZero(eroded) == 0
 
 
+def contains(me, other):
+    """:returns: True if ``other`` is entirely contained within self."""
+    a = (me[0:2] <= other[:, 0:2]) * (me[2:4] >= other[:, 2:4])
+    return 1 ^ (a[:,0] * a[:,1])
+
+
 def _merge_regions(regions):
     """Discard regions that are entirely contained within another region."""
-    regions.sort(key=lambda r: r.width * r.height)
-    i = len(regions) - 1
-    while i > 0:
-        r = regions[i]
-        for j in range(i - 1, -1, -1):
-            if r.contains(regions[j]):
-                del regions[j]
-                i -= 1
-        i -= 1
+    rs = numpy.empty(shape=len(regions), dtype=[
+            ("r", numpy.uint16, 4),
+            ("n", numpy.uint16),
+            ("keep", numpy.bool),
+            ("area", numpy.uint32),
+    ])
+    rs['r'] = regions
+    rsr = rs['r']
+
+    rs["keep"] = True
+    rs["area"] = -(rsr[:,2] - rsr[:,0]) * (rsr[:,3] - rsr[:,1])
+    rs.sort(axis=0, order="area")
+
+    n_remaining = len(rs)
+
+    for n, r in enumerate(rs):
+        if n_remaining <= 0:
+            break
+        if not r["keep"]:
+            continue
+
+        # This is a view
+        rest = rs[n + 1:]
+        idx = rest["keep"]
+
+        new_keep = contains(r['r'], rest['r'][idx])
+        rest["keep"][idx] = new_keep
+        n_remaining -= 1 + numpy.sum(new_keep)
+
+    return rs['r'][rs['keep']].view(dtype=[
+            ("x", numpy.uint16),
+            ("y", numpy.uint16),
+            ("right", numpy.uint16),
+            ("bottom", numpy.uint16)]).flatten()
 
 
 def _log_match_image_debug(imglog):
