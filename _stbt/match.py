@@ -668,24 +668,26 @@ def _match_template(image, template, mask, method, roi_mask, level, imwrite):
                                  dtype=numpy.float32)
 
     if roi_mask is None:
-        rois = [  # Initial region of interest: The whole image.
-            Region(0, 0, matches_heatmap.shape[1], matches_heatmap.shape[0])]
+        # Initial region of interest: The whole image.
+        rois = numpy.array(
+            [[0, 0, matches_heatmap.shape[1], matches_heatmap.shape[0]]],
+            dtype=numpy.uint16)
     else:
-        rois = [Region(*x) for x in cv2_compat.find_contour_boxes(
-            roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)]
-        _merge_regions(rois)
+        rois = cv2_compat.find_contour_boxes(
+            roi_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        rois[:, 2:4] += rois[:, 0:2]
+        # _merge_regions(rois)
 
     if get_debug_level() > 1:
         source_with_rois = image.copy()
-        for roi in rois:
-            r = roi
+        for r in rois:
             t = _Size(*template.shape[:2])
             s = _Size(*source_with_rois.shape[:2])
             cv2.rectangle(
                 source_with_rois,
-                (max(0, r.x), max(0, r.y)),
-                (min(s.w - 1, r.right + t.w - 1),
-                 min(s.h - 1, r.bottom + t.h - 1)),
+                (max(0, r[0]), max(0, r[1])),
+                (min(s.w - 1, r[2] + t.w - 1),
+                 min(s.h - 1, r[3] + t.h - 1)),
                 (0, 255, 255),
                 thickness=1)
         imwrite("source_with_rois", source_with_rois)
@@ -695,14 +697,13 @@ def _match_template(image, template, mask, method, roi_mask, level, imwrite):
     else:
         kwargs = {}  # For OpenCV < 3.0.0
     for roi in rois:
-        r = roi.extend(right=template.shape[1] - 1,
-                       bottom=template.shape[0] - 1)
         ddebug("Level %d: Searching in %s" % (level, roi))
         cv2.matchTemplate(
-            image[r.to_slice()],
+            image[roi[1]:roi[3] - 1 + template.shape[0],
+                  roi[0]:roi[2] - 1 + template.shape[1]],
             template,
             method,
-            matches_heatmap[roi.to_slice()],
+            matches_heatmap[roi[1]:roi[3], roi[0]:roi[2]],
             **kwargs)
 
     if method == cv2.TM_SQDIFF:

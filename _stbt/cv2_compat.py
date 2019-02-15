@@ -5,13 +5,17 @@ Compatibility so stb-tester will work with both OpenCV 2 and 3.
 from distutils.version import LooseVersion
 
 import cv2
+import numpy
 
 version = LooseVersion(cv2.__version__).version
 
 if version >= [3, 2, 0]:
     def find_contour_boxes(image, mode, method):
         contours = cv2.findContours(image=image, mode=mode, method=method)[1]
-        return [cv2.boundingRect(x) for x in contours]
+        out = numpy.empty(shape=(len(contours), 4), dtype=numpy.uint16)
+        for n, c in enumerate(contours):
+            out[n] = cv2.boundingRect(c)
+        return out
 else:
     def _fix_pre_3_2_rects(r):
         # In OpenCV 3.2 the behaviour of findContours changed.  It seems more
@@ -26,7 +30,10 @@ else:
         # rather than (contours, heirarchy).  Index -2 selects contours on both
         # versions:
         contours = cv2.findContours(image=image, mode=mode, method=method)[-2]
-        return [_fix_pre_3_2_rects(cv2.boundingRect(x)) for x in contours]
+        out = numpy.empty(shape=(len(contours), 4), dtype=numpy.uint16)
+        for n, c in enumerate(contours):
+            out[n] = _fix_pre_3_2_rects(cv2.boundingRect(c))
+        return out
 
 # We prefer the v3 names here rather than the v2.4 names:
 if version >= [3, 0, 0]:
