@@ -250,9 +250,7 @@ def ocr(frame=None, region=Region.ALL,
     if region is None:
         raise TypeError(
             "Passing region=None to ocr is deprecated since v0.21. "
-            "In a future version, region=None will mean an empty region "
-            "instead. To OCR an entire video frame, use "
-            "`region=Region.ALL`.")
+            "To OCR an entire video frame, use `region=Region.ALL`.")
 
     if isinstance(tesseract_user_words, (bytes, str)):
         tesseract_user_words = [tesseract_user_words]
@@ -330,13 +328,13 @@ def match_text(text, frame=None, region=Region.ALL,
                              imglog)
     if xml == '':
         hocr = None
-        result = TextMatchResult(rts, False, None, frame, text)
+        result = TextMatchResult(rts, False, Region.NONE, frame, text)
     else:
         hocr = lxml.etree.fromstring(xml.encode('utf-8'))
         p = _hocr_find_phrase(hocr, to_unicode(text).split(), case_sensitive)
         if p:
             # Find bounding box
-            box = None
+            box = Region.NONE
             for _, elem in p:
                 box = Region.bounding_box(box, _hocr_elem_region(elem))
             # _tesseract crops to region and scales up by a factor of 3 so
@@ -347,7 +345,7 @@ def match_text(text, frame=None, region=Region.ALL,
                 region.x + box.right // n, region.y + box.bottom // n)
             result = TextMatchResult(rts, True, box, frame, text)
         else:
-            result = TextMatchResult(rts, False, None, frame, text)
+            result = TextMatchResult(rts, False, Region.NONE, frame, text)
 
     if result.match:
         debug("match_text: Match found: %s" % str(result))
@@ -443,11 +441,11 @@ def _tesseract(frame, region, mode, lang, _config, user_patterns, user_words,
 
     frame_region = _image_region(frame)
     intersection = Region.intersect(frame_region, region)
-    if intersection is None:
+    if not intersection:
         warn("Requested OCR in region %s which doesn't overlap with "
              "the frame %s" % (str(region), frame_region))
-        imglog.set(region=None)
-        return (u'', None)
+        imglog.set(region=Region.NONE)
+        return (u'', Region.NONE)
     else:
         region = intersection
         imglog.set(region=region)

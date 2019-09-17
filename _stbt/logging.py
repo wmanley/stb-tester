@@ -180,7 +180,7 @@ class ImageLogger(object):
     def _draw(self, region, source_size, css_class, title=None):
         import jinja2
 
-        if region is None:
+        if not region:
             return ""
 
         if isinstance(css_class, bool):

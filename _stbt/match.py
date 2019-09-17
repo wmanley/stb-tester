@@ -374,7 +374,7 @@ def _match_all(image, frame, match_parameters, region):
                 % (template.relative_filename, match_parameters.match_method))
 
     input_region = Region.intersect(_image_region(frame), region)
-    if input_region is None:
+    if not input_region:
         raise ValueError("frame with dimensions %r doesn't contain %r"
                          % (frame.shape, region))
     if input_region.height < t.shape[0] or input_region.width < t.shape[1]:

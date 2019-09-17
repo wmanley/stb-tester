@@ -8,6 +8,7 @@ from __future__ import absolute_import
 from builtins import *  # pylint:disable=redefined-builtin,unused-wildcard-import,wildcard-import,wrong-import-order
 from future.utils import with_metaclass
 
+import math
 from collections import namedtuple
 
 
@@ -32,22 +33,22 @@ class _RegionClsMethods(type):
         except StopIteration:
             # No arguments passed:
             return Region.ALL
-        if out is None:
-            return None
+        if not out:
+            return Region.NONE
 
         for r in args:
             if not r:
-                return None
+                return Region.NONE
             out = (max(out[0], r[0]), max(out[1], r[1]),
                    min(out[2], r[2]), min(out[3], r[3]))
             if out[0] >= out[2] or out[1] >= out[3]:
-                return None
+                return Region.NONE
         return Region.from_extents(*out)
 
     def bounding_box(cls, *args):
         args = [_f for _f in args if _f]
         if not args:
-            return None
+            return Region.NONE
         return Region.from_extents(
             min(r.x for r in args),
             min(r.y for r in args),
@@ -56,6 +57,7 @@ class _RegionClsMethods(type):
 
 
 INF = float('inf')
+NAN = float('nan')
 
 
 class Region(with_metaclass(_RegionClsMethods,
@@ -104,9 +106,9 @@ class Region(with_metaclass(_RegionClsMethods,
     >>> Region.intersect(c, b) == c
     True
     >>> print(Region.intersect(a, c))
-    None
-    >>> print(Region.intersect(None, a))
-    None
+    Region.NONE
+    >>> print(Region.intersect(Region.NONE, a))
+    Region.NONE
     >>> Region.intersect(a)
     Region(x=0, y=0, right=8, bottom=8)
     >>> Region.intersect()
@@ -188,16 +190,16 @@ class Region(with_metaclass(_RegionClsMethods,
         Region(x=20, y=20, right=60, bottom=50)
         >>> Region.bounding_box(b, b)
         Region(x=20, y=30, right=30, bottom=50)
-        >>> Region.bounding_box(None, b)
+        >>> Region.bounding_box(Region.NONE, b)
         Region(x=20, y=30, right=30, bottom=50)
-        >>> Region.bounding_box(b, None)
+        >>> Region.bounding_box(b, Region.NONE)
         Region(x=20, y=30, right=30, bottom=50)
         >>> Region.bounding_box(b, Region.ALL)
         Region.ALL
-        >>> print(Region.bounding_box(None, None))
-        None
+        >>> print(Region.bounding_box(Region.NONE, Region.NONE))
+        Region.NONE
         >>> print(Region.bounding_box())
-        None
+        Region.NONE
         >>> Region.bounding_box(b)
         Region(x=20, y=30, right=30, bottom=50)
         >>> Region.bounding_box(a, b, c) == \
@@ -209,10 +211,10 @@ class Region(with_metaclass(_RegionClsMethods,
 
     .. py:staticmethod:: intersect(*args)
 
-        :returns: The intersection of the passed regions, or ``None`` if the
-            regions don't intersect.
+        :returns: The intersection of the passed regions, or ``Region.NONE`` if
+            the regions don't intersect.
 
-        Any parameter can be ``None`` (an empty Region) so intersect is
+        Any parameter can be ``Region.NONE`` (an empty Region) so intersect is
         commutative and associative.
 
         Changed in v30: ``intersect`` can take an arbitrary number of region
@@ -237,9 +239,14 @@ class Region(with_metaclass(_RegionClsMethods,
     def __repr__(self):
         if self == Region.ALL:
             return 'Region.ALL'
+        elif all(math.isnan(x) for x in self):
+            return 'Region.NONE'
         else:
             return 'Region(x=%r, y=%r, right=%r, bottom=%r)' \
                 % (self.x, self.y, self.right, self.bottom)
+
+    def __nonzero__(self):
+        return all(not math.isnan(x) for x in self)
 
     @property
     def width(self):
@@ -329,12 +336,12 @@ class Region(with_metaclass(_RegionClsMethods,
         >>> Region(20, 30, right=30, bottom=50).erode(3)
         Region(x=23, y=33, right=27, bottom=47)
         >>> print(Region(20, 30, 10, 20).erode(5))
-        None
+        Region.NONE
         """
         if self.width > n * 2 and self.height > n * 2:
             return self.dilate(-n)
         else:
-            return None
+            return Region.NONE
 
     def above(self, height=INF):
         """
@@ -366,6 +373,7 @@ class Region(with_metaclass(_RegionClsMethods,
 
 
 Region.ALL = Region(x=-INF, y=-INF, right=INF, bottom=INF)
+Region.NONE = Region(x=NAN, y=NAN, right=NAN, bottom=NAN)
 
 
 class UITestError(Exception):
