@@ -55,6 +55,9 @@ class _RegionClsMethods(type):
             max(r.bottom for r in args))
 
 
+INF = float('inf')
+
+
 class Region(with_metaclass(_RegionClsMethods,
                             namedtuple('Region', 'x y right bottom'))):
     r"""
@@ -108,7 +111,7 @@ class Region(with_metaclass(_RegionClsMethods,
     Region(x=0, y=0, right=8, bottom=8)
     >>> Region.intersect()
     Region.ALL
-    >>> quadrant = Region(x=float("-inf"), y=float("-inf"), right=0, bottom=0)
+    >>> quadrant = Region(x=-INF, y=-INF, right=0, bottom=0)
     >>> quadrant.translate(2, 2)
     Region(x=-inf, y=-inf, right=2, bottom=2)
     >>> c.translate(x=-9, y=-3)
@@ -333,28 +336,28 @@ class Region(with_metaclass(_RegionClsMethods,
         else:
             return None
 
-    def above(self, height=float('inf')):
+    def above(self, height=INF):
         """
         :returns: A new region above the current region, extending to the top
             of the frame (or to the specified height).
         """
         return self.replace(y=self.y - height, bottom=self.y)
 
-    def below(self, height=float('inf')):
+    def below(self, height=INF):
         """
         :returns: A new region below the current region, extending to the bottom
             of the frame (or to the specified height).
         """
         return self.replace(y=self.bottom, bottom=self.bottom + height)
 
-    def right_of(self, width=float('inf')):
+    def right_of(self, width=INF):
         """
         :returns: A new region to the right of the current region, extending to
             the right edge of the frame (or to the specified width).
         """
         return self.replace(x=self.right, right=self.right + width)
 
-    def left_of(self, width=float('inf')):
+    def left_of(self, width=INF):
         """
         :returns: A new region to the left of the current region, extending to
             the left edge of the frame (or to the specified width).
@@ -362,8 +365,7 @@ class Region(with_metaclass(_RegionClsMethods,
         return self.replace(x=self.x - width, right=self.x)
 
 
-Region.ALL = Region(x=-float('inf'), y=-float('inf'),
-                    right=float('inf'), bottom=float('inf'))
+Region.ALL = Region(x=-INF, y=-INF, right=INF, bottom=INF)
 
 
 class UITestError(Exception):
