@@ -36,6 +36,7 @@ from _stbt.imgutils import (
     Frame,
     Image,
     load_image,
+    mask_out,
     save_frame)
 from _stbt.keyboard import (
     Keyboard)
@@ -103,6 +104,7 @@ __all__ = [to_native_str(x) for x in [
     "Keyboard",
     "last_keypress",
     "load_image",
+    "mask_out",
     "match",
     "match_all",
     "match_text",
