@@ -12,10 +12,9 @@ import time
 from logging import getLogger
 
 import networkx as nx
-import numpy
 from attr import attrs, attrib
 from _stbt.grid import Grid
-from _stbt.imgutils import load_image
+from _stbt.imgutils import preload_mask
 from _stbt.types import Region
 from _stbt.utils import basestring, text_type
 
@@ -195,12 +194,7 @@ class Keyboard(object):
         self.G_ = None  # navigation without shift transitions that type text
         self.modes = set()
 
-        self.mask = None
-        if isinstance(mask, numpy.ndarray):
-            self.mask = mask
-        elif mask:
-            self.mask = load_image(mask, color_channels=1)
-
+        self.mask = preload_mask(mask)
         self.navigate_timeout = navigate_timeout
 
         self.symmetrical_keys = {

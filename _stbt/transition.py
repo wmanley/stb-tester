@@ -24,7 +24,12 @@ import cv2
 import numpy
 
 from .diff import FrameDiffer, MotionDiff, MotionResult
-from .imgutils import crop, load_image, pixel_bounding_box
+from .imgutils import (
+    crop,
+    load_mask,
+    pixel_bounding_box,
+    preload_mask,
+    _validate_region)
 from .logging import ddebug, debug, draw_on
 from .types import Region
 
@@ -156,9 +161,7 @@ def wait_for_transition_to_end(
 class _Transition(object):
     def __init__(self, region, mask, timeout_secs, stable_secs, min_size, dut):
         self.region = region
-        self.mask = None
-        if mask is not None:
-            self.mask = load_image(mask, color_channels=1)
+        self.mask = preload_mask(mask)
 
         self.timeout_secs = timeout_secs
         self.stable_secs = stable_secs
@@ -246,10 +249,14 @@ class StrictDiff(FrameDiffer):
 
     def __init__(self, initial_frame, region=Region.ALL, mask=None,
                  min_size=None):
-        super(StrictDiff, self).__init__(initial_frame, region, mask, min_size)
-        if self.mask is not None:
-            # We need 3 channels to match `frame`.
-            self.mask = cv2.cvtColor(self.mask, cv2.COLOR_GRAY2BGR)
+        self.prev_frame = initial_frame
+        self.region = _validate_region(self.prev_frame, region)
+        self.min_size = min_size
+
+        if mask is not None:
+            mask = load_mask(mask, shape=(
+                self.region.height, self.region.width, 3))
+        self.mask = mask
 
     def diff(self, frame):
         absdiff = cv2.absdiff(crop(self.prev_frame, self.region),
